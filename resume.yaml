@@ -92,11 +92,37 @@ experience:
 
 projects:
   - name: AI-Powered Healthcare Provider Search API
-    description: Designed an intelligent search system using FastAPI, LangChain, and Azure OpenAI. Implemented NLP query extraction, multi-source retrieval, and semantic ranking to provide LLM-generated match explanations. Features include JWT-based conversational refinement and cross-pod FAISS hot-reloading for high availability.
+    highlights:
+      - Architected a modular FastAPI service layer with asynchronous request handling, dependency injection, and structured exception management to support high-concurrency provider search workloads.
+      - Implemented NLP query extraction using LangChain and Azure OpenAI to parse natural language inputs, perform multi-source retrieval, and generate LLM-powered semantic match explanations across 53K+ providers.
+      - Implemented Redis-based caching and request throttling strategies, reducing repeated database lookups and improving response consistency under concurrent usage.
+      - Designed resilient fallback logic across CMS APIs, Oracle DB, and FAISS vector search services; supported JWT-based conversational refinement and cross-pod FAISS hot-reloading for high availability.
+      - Added centralized request tracing and structured logging, enabling faster production debugging and performance monitoring across distributed Kubernetes pods.
   - name: AI-Assisted QA Automation Platform
-    description: Built a full-stack no-code platform using React, FastAPI, and LangGraph. Engineered an asynchronous DAG execution engine supporting API, SSH, and database validation, allowing users to manage complex test flows via natural-language commands.
+    highlights:
+      - Built a full-stack no-code platform using React, FastAPI, and LangGraph, enabling testers to create and execute integration test workflows through natural-language commands and a drag-and-drop UI.
+      - Engineered an asynchronous DAG execution engine supporting API, SSH, and database validation with parallel task orchestration, dependency resolution, retry handling, and execution state persistence.
+      - Designed YAML-based workflow serialization, allowing version-controlled test definitions and seamless migration across environments.
+      - Implemented role-based authentication, secure execution isolation, and websocket-based status streaming for real-time progress updates across backend and frontend.
   - name: AI-Powered Kubernetes Log Analyzer
-    description: Developed a conversational platform using Flask and the Kubernetes Python client to analyze multi-cluster logs. Utilized Azure OpenAI to diagnose system failures and recommend remediation steps through thread-isolated chat sessions.
+    highlights:
+      - Developed a multi-cluster connection manager to securely handle Kubernetes credentials and namespace-level access across isolated environments.
+      - Implemented thread-safe session handling and memory management, allowing multiple users to perform concurrent log investigations without context leakage.
+      - Built streaming log ingestion pipelines to process large pod logs incrementally, preventing memory spikes during high-volume analysis.
+      - Integrated retry policies and timeout controls for unstable cluster connections to improve system reliability during incident analysis.
+  - name: ChatBot using OpenAI Services
+    highlights:
+      - Designed a retrieval pipeline to fetch data from databases, logs, and internal wiki sources, improving contextual response accuracy for enterprise support queries.
+      - Built RESTful backend services to process user prompts, vector search requests, and response orchestration between Azure OpenAI and internal systems.
+      - Implemented session-based conversation handling to preserve context across multi-turn interactions while maintaining user-level isolation.
+      - Added query caching and response optimization, reducing repeated retrieval overhead and improving response latency.
+      - Integrated authentication and access controls to ensure secure retrieval of sensitive enterprise operational data.
+  - name: Patient Readmission Prediction Project
+    highlights:
+      - Developed data preprocessing pipelines to transform longitudinal patient records into time-series features for downstream LSTM model training.
+      - Built reusable Python service modules for data ingestion, embedding generation, model inference, and evaluation.
+      - Optimized large-scale medical code embedding workflows, reducing preprocessing time for high-volume healthcare datasets.
+      - Created a modular prediction workflow that could be exposed as a backend inference API for clinical decision support systems.
 
 education:
   - degree: Master of Engineering (CSE)

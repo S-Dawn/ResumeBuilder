@@ -10,16 +10,16 @@ from weasyprint import HTML
 CSS_STYLES = """
     @page {
         size: A4;
-        margin: 10mm 10mm 9mm;
+        margin: 7mm 8mm 6mm;
         background-color: #ffffff;
     }
     body {
         font-family: "Helvetica", "Arial", sans-serif;
         color: #111;
-        line-height: 1.22;
+        line-height: 1.10;
         margin: 0;
         padding: 0;
-        font-size: 8.6pt;
+        font-size: 7.6pt;
     }
     .header {
         text-align: center;
@@ -53,7 +53,7 @@ CSS_STYLES = """
         color: #111;
         border-bottom: 1px solid #222;
         padding-bottom: 1px;
-        margin: 8px 0 4px 0;
+        margin: 6px 0 3px 0;
         text-transform: uppercase;
         letter-spacing: 0.4px;
     }
@@ -61,7 +61,7 @@ CSS_STYLES = """
         margin: 0 0 4px 0;
     }
     .experience-item, .project-item {
-        margin-bottom: 5px;
+        margin-bottom: 3px;
     }
     .item-header {
         display: flex;
@@ -73,14 +73,14 @@ CSS_STYLES = """
     .item-sub {
         color: #333;
         font-size: 8.2pt;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
     }
     ul {
-        margin: 2px 0 4px 14px;
+        margin: 1px 0 3px 12px;
         padding: 0;
     }
     li {
-        margin-bottom: 1px;
+        margin-bottom: 0;
     }
     .skills-line {
         margin-bottom: 3px;
@@ -91,6 +91,9 @@ CSS_STYLES = """
     }
     .section-tight {
         margin-bottom: 2px;
+    }
+    .project-points {
+        margin: 1px 0 2px 12px;
     }
     .subline {
         display: flex;
@@ -180,11 +183,21 @@ def render_projects(projects: list[dict]) -> str:
     for project in projects:
         name = esc(project.get("name", ""))
         description = esc(project.get("description", ""))
+        highlights = project.get("highlights", [])
+
+        project_points = ""
+        if isinstance(highlights, list) and highlights:
+            bullets = "\n".join(
+                f"<li>{esc(str(highlight))}</li>" for highlight in highlights
+            )
+            project_points = f'<ul class="project-points">{bullets}</ul>'
+
         blocks.append(
             f"""
     <div class=\"project-item\">
         <div class=\"item-header\">{name}</div>
-        <div class=\"item-sub\">{description}</div>
+        {f'<div class="item-sub">{description}</div>' if description else ''}
+        {project_points}
     </div>
         """
         )
