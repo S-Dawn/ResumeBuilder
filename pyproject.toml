@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "resume-builder"
+version = "0.1.0"
+description = "Generate a resume PDF from HTML using WeasyPrint"
+authors = ["Subham Dawn <coder.sdawn@gmail.com>"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.10,<4.0"
+weasyprint = "^62.3"
+pydyf = ">=0.10,<0.12"
+pyyaml = "^6.0.2"
+
+[build-system]
+requires = ["poetry-core>=1.9.0"]
+build-backend = "poetry.core.masonry.api"

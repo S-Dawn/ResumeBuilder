@@ -1,0 +1,113 @@
+profile:
+  name: Subham Dawn
+  title: Senior Software Engineer
+  phone: "+91 7892141432"
+  email: coder.sdawn@gmail.com
+  location: Bengaluru
+  links:
+    - label: LinkedIn
+      url: "#"
+    - label: ResearchGate
+      url: "#"
+    - label: GitHub
+      url: "#"
+
+summary: >
+  Senior Software Engineer with 5+ years of experience building scalable backend
+  platforms, AI-driven applications, and cloud-native enterprise systems.
+  Specialized in Generative AI, LLM orchestration, intelligent search systems,
+  and workflow automation using Python, Java, FastAPI, Spring Boot, LangChain,
+  and Azure OpenAI. Proven track record of delivering production-grade APIs,
+  multi-agent systems, and automation platforms that improve operational
+  efficiency, accelerate diagnostics, and reduce manual effort across healthcare
+  and enterprise domains.
+
+skills:
+  - category: AI/ML
+    items:
+      - Generative AI
+      - LLMs (GPT-4/5)
+      - LangChain
+      - LangGraph
+      - NLP
+      - Deep Learning (LSTM, CNN)
+      - RAG
+      - FAISS
+  - category: Languages
+    items:
+      - Java
+      - Python
+      - C++
+      - Bash/Shell
+  - category: Backend
+    items:
+      - Spring Boot
+      - FastAPI
+      - REST/SOAP APIs
+      - Microservices
+      - Hibernate
+      - Kafka
+      - Apache Beam
+  - category: Cloud & DevOps
+    items:
+      - Azure
+      - GCP
+      - Docker
+      - Kubernetes
+      - Jenkins
+      - GitHub Workflows
+      - Liquibase
+  - category: Databases
+    items:
+      - Oracle SQL
+      - SQL Server
+      - Postgres
+      - SSMS
+  - category: Frontend
+    items:
+      - React
+      - JavaScript
+      - TypeScript
+
+experience:
+  - role: Senior Software Engineer
+    company: Optum Global Solutions
+    location: Bengaluru
+    duration: Jul 2022 - Present
+    highlights:
+      - Designed an AI-powered healthcare provider search API using FastAPI, LangChain, FAISS, and Azure OpenAI, enabling semantic discovery across 53K+ providers with 4-5 second response latency.
+      - Built an AI-assisted QA automation platform with React, FastAPI, LangGraph, and Azure OpenAI, allowing testers to create and execute integration workflows through natural language commands and a drag-and-drop UI.
+      - Developed a Kubernetes log analysis assistant that leverages LLM agents to collect pod logs across multiple clusters, identify root causes, and recommend real-time fixes.
+      - Implemented internal RAG-based support chatbots integrated with databases, logs, and documentation, significantly reducing engineering investigation time and improving developer productivity.
+      - Developed scalable backend services using Java, Spring Boot, Kafka, and Kubernetes, improving deployment reliability and reducing operational downtime by 25%.
+      - Automated database and release pipelines with Liquibase and Jenkins, reducing manual effort by 10 hours/week and deployment errors by 90%.
+      - Created deep learning solutions for healthcare, including an LSTM model for patient readmission prediction, improving early risk detection.
+  - role: Associate Consultant
+    company: Oracle Financial Services Software
+    location: Bengaluru
+    duration: Aug 2016 - Sep 2018
+    highlights:
+      - Developed automation tools and SOAP-based APIs using Java and Python to process client ETL files, reducing operational costs and improving resource utilization.
+      - Built ML models for predicting missing data in financial datasets to ensure data integrity for client deliverables.
+
+projects:
+  - name: AI-Powered Healthcare Provider Search API
+    description: Designed an intelligent search system using FastAPI, LangChain, and Azure OpenAI. Implemented NLP query extraction, multi-source retrieval, and semantic ranking to provide LLM-generated match explanations. Features include JWT-based conversational refinement and cross-pod FAISS hot-reloading for high availability.
+  - name: AI-Assisted QA Automation Platform
+    description: Built a full-stack no-code platform using React, FastAPI, and LangGraph. Engineered an asynchronous DAG execution engine supporting API, SSH, and database validation, allowing users to manage complex test flows via natural-language commands.
+  - name: AI-Powered Kubernetes Log Analyzer
+    description: Developed a conversational platform using Flask and the Kubernetes Python client to analyze multi-cluster logs. Utilized Azure OpenAI to diagnose system failures and recommend remediation steps through thread-isolated chat sessions.
+
+education:
+  - degree: Master of Engineering (CSE)
+    institution: Jadavpur University
+    score: "CGPA: 8.86"
+    date: Jul 2022
+  - degree: Bachelor of Technology (CSE)
+    institution: Academy of Technology (MAKAUT)
+    score: "CGPA: 8.83"
+    date: Jul 2016
+
+certifications_and_achievements:
+  - 'Achievements: 7x "Diamond in Innovation/Performance" awards for Generative AI search APIs, Patient Readmission models, and automated QA systems.'
+  - 'Certifications: Advanced Java (Globsyn), Deep Learning (Udemy), Quantum Computing with Qiskit (Udemy).'
