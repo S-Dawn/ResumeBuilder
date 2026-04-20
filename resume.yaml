@@ -6,11 +6,11 @@ profile:
   location: Bengaluru
   links:
     - label: LinkedIn
-      url: "#"
-    - label: ResearchGate
-      url: "#"
+      url: "https://www.linkedin.com/in/subham-dawn-9b2bb19b/"
     - label: GitHub
-      url: "#"
+      url: "https://github.com/S-Dawn"
+
+experience_years: "5+"
 
 summary: >
   Senior Software Engineer with 5+ years of experience building scalable backend
@@ -38,7 +38,7 @@ skills:
       - Java
       - Python
       - C++
-      - Bash/Shell
+      - Bash/Shell/ZSH
   - category: Backend
     items:
       - Spring Boot

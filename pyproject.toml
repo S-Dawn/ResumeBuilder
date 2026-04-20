@@ -1,8 +1,12 @@
 [tool.poetry]
 name = "resume-builder"
 version = "0.1.0"
-description = "Generate a resume PDF from HTML using WeasyPrint"
+description = "YAML-driven ATS-friendly resume generator using WeasyPrint"
 authors = ["Subham Dawn <coder.sdawn@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+repository = "https://github.com/S-Dawn/ResumeBuilder"
+keywords = ["resume", "pdf", "weasyprint", "yaml", "cv"]
 package-mode = false
 
 [tool.poetry.dependencies]

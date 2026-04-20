@@ -15,7 +15,7 @@ env/
 
 # OS/editor noise
 .DS_Store
-.vscode/
+# .vscode/
 
 # Generated resume artifacts
 generated/

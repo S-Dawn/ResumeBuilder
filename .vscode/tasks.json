@@ -1,0 +1,39 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Install Dependencies",
+			"type": "shell",
+			"command": "poetry",
+			"args": [
+				"install",
+				"--compile"
+			]
+		},
+		{
+			"label": "Build Resume",
+			"type": "shell",
+			"command": "poetry",
+			"args": [
+				"run",
+				"python",
+				"ResumeBuilder.py"
+			],
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+		{
+			"label": "Run Resume Builder",
+			"type": "shell",
+			"command": "poetry",
+			"args": [
+				"run",
+				"python",
+				"ResumeBuilder.py"
+			],
+			"group": "none"
+		}
+	]
+}

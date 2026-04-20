@@ -10,91 +10,96 @@ from weasyprint import HTML
 CSS_STYLES = """
     @page {
         size: A4;
-        margin: 15mm 12mm;
+        margin: 10mm 10mm 9mm;
         background-color: #ffffff;
     }
     body {
         font-family: "Helvetica", "Arial", sans-serif;
-        color: #333;
-        line-height: 1.4;
+        color: #111;
+        line-height: 1.22;
         margin: 0;
         padding: 0;
-        font-size: 10pt;
+        font-size: 8.6pt;
     }
     .header {
         text-align: center;
-        border-bottom: 2px solid #2c3e50;
-        padding-bottom: 10px;
-        margin-bottom: 15px;
+        border-bottom: 1px solid #222;
+        padding-bottom: 5px;
+        margin-bottom: 6px;
     }
     h1 {
-        font-size: 20pt;
+        font-size: 17pt;
         margin: 0;
-        color: #2c3e50;
+        color: #111;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.6px;
     }
     .job-title {
-        font-size: 13pt;
+        font-size: 10pt;
         font-weight: bold;
-        color: #555;
-        margin: 5px 0;
+        color: #222;
+        margin: 2px 0;
     }
     .contact-info {
-        font-size: 9pt;
-        color: #666;
+        font-size: 8.2pt;
+        color: #333;
     }
     .contact-info a {
-        color: #2980b9;
+        color: #111;
         text-decoration: none;
     }
     h2 {
-        font-size: 13pt;
-        color: #2c3e50;
-        border-left: 4px solid #2c3e50;
-        padding-left: 8px;
-        margin: 18px 0 8px 0;
+        font-size: 9pt;
+        color: #111;
+        border-bottom: 1px solid #222;
+        padding-bottom: 1px;
+        margin: 8px 0 4px 0;
         text-transform: uppercase;
-        background-color: #f8f9fa;
+        letter-spacing: 0.4px;
     }
-    h3 {
-        font-size: 11pt;
-        margin: 12px 0 4px 0;
-        color: #333;
+    p {
+        margin: 0 0 4px 0;
     }
     .experience-item, .project-item {
-        margin-bottom: 12px;
+        margin-bottom: 5px;
     }
     .item-header {
-        display: block;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
         font-weight: bold;
-        margin-bottom: 2px;
+        margin-bottom: 1px;
     }
     .item-sub {
-        font-style: italic;
-        color: #666;
-        font-size: 9.5pt;
-        margin-bottom: 4px;
+        color: #333;
+        font-size: 8.2pt;
+        margin-bottom: 2px;
     }
     ul {
-        margin: 4px 0 8px 18px;
+        margin: 2px 0 4px 14px;
         padding: 0;
     }
     li {
-        margin-bottom: 4px;
+        margin-bottom: 1px;
     }
-    .skills-grid {
-        width: 100%;
+    .skills-line {
+        margin-bottom: 3px;
     }
-    .skills-grid td {
-        vertical-align: top;
-        padding-bottom: 4px;
-    }
-    .skill-cat {
+    .skills-label,
+    .bold {
         font-weight: bold;
-        width: 130px;
     }
-    .bold { font-weight: bold; }
+    .section-tight {
+        margin-bottom: 2px;
+    }
+    .subline {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+    }
+    .muted {
+        color: #333;
+    }
 """
 
 
@@ -134,10 +139,7 @@ def render_skills(skills: list[dict]) -> str:
             item_text = esc(str(items))
         rows.append(
             f"""
-        <tr>
-            <td class=\"skill-cat\">{category}:</td>
-            <td>{item_text}</td>
-        </tr>
+        <div class=\"skills-line\"><span class=\"skills-label\">{category}:</span> {item_text}</div>
         """
         )
 
@@ -152,8 +154,7 @@ def render_experience(experience: list[dict]) -> str:
         location = esc(item.get("location", ""))
         duration = esc(item.get("duration", ""))
 
-        header_parts = [part for part in [role, company, location] if part]
-        header_text = " | ".join(header_parts)
+        company_line = " | ".join(part for part in [company, location] if part)
 
         highlights = "\n".join(
             f"<li>{esc(str(highlight))}</li>" for highlight in item.get("highlights", [])
@@ -162,8 +163,8 @@ def render_experience(experience: list[dict]) -> str:
         blocks.append(
             f"""
     <div class=\"experience-item\">
-        <div class=\"item-header\">{header_text}</div>
-        <div class=\"item-sub\">{duration}</div>
+        <div class=\"item-header\"><span>{role}</span><span>{duration}</span></div>
+        <div class=\"item-sub\">{company_line}</div>
         <ul>
             {highlights}
         </ul>
@@ -183,7 +184,7 @@ def render_projects(projects: list[dict]) -> str:
             f"""
     <div class=\"project-item\">
         <div class=\"item-header\">{name}</div>
-        <p style=\"margin: 2px 0 8px 0;\">{description}</p>
+        <div class=\"item-sub\">{description}</div>
     </div>
         """
         )
@@ -199,14 +200,10 @@ def render_education(education: list[dict]) -> str:
         score = esc(item.get("score", ""))
         date = esc(item.get("date", ""))
 
-        details = " | ".join(part for part in [institution, score, date] if part)
-        items.append(
-            f"""
-    <div style=\"margin-bottom: 5px;\">
-        <span class=\"bold\">{degree}</span>{" | " + details if details else ""}
-    </div>
-        """
-        )
+        all_parts = [part for part in [degree, institution, date, score] if part]
+        line = " | ".join(f"<span class=\"bold\">{all_parts[0]}</span>" if i == 0 else esc(p)
+                          for i, p in enumerate(all_parts))
+        items.append(f'<div class="section-tight">{line}</div>')
 
     return "\n".join(items)
 
@@ -215,8 +212,40 @@ def render_bullets(items: list[str]) -> str:
     return "\n".join(f"<li>{esc(str(item))}</li>" for item in items)
 
 
+def extract_section_items(items: list[str], prefix: str) -> list[str]:
+    prefix_with_colon = f"{prefix}:"
+    extracted: list[str] = []
+    for item in items:
+        text = str(item)
+        if text.startswith(prefix_with_colon):
+            extracted.append(text[len(prefix_with_colon):].strip())
+    return extracted
+
+
+def get_experience_years_label(years: str) -> str:
+    if not years:
+        return ""
+    return f" ({years} Years)"
+
+
 def build_html(resume: dict) -> str:
     profile = resume.get("profile", {})
+    experience = resume.get("experience", [])
+    summary = resume.get("summary", "")
+    experience_years = resume.get("experience_years", "")
+    cert_and_achievement_items = resume.get("certifications_and_achievements", [])
+    certifications = extract_section_items(cert_and_achievement_items, "Certifications")
+    achievements = extract_section_items(cert_and_achievement_items, "Achievements")
+    combined_certifications_and_achievements = []
+
+    if achievements:
+        combined_certifications_and_achievements.append(
+            f'Achievements: {"; ".join(achievements)}'
+        )
+    if certifications:
+        combined_certifications_and_achievements.append(
+            f'Certifications: {"; ".join(certifications)}'
+        )
 
     return f"""
 <!DOCTYPE html>
@@ -239,14 +268,12 @@ def build_html(resume: dict) -> str:
     <p>{esc(resume.get("summary", ""))}</p>
 
     <h2>Technical Skills</h2>
-    <table class=\"skills-grid\">
-        {render_skills(resume.get("skills", []))}
-    </table>
+    {render_skills(resume.get("skills", []))}
 
-    <h2>Professional Experience</h2>
-    {render_experience(resume.get("experience", []))}
+    <h2>Professional Experience{get_experience_years_label(experience_years)}</h2>
+    {render_experience(experience)}
 
-    <h2>Core Projects</h2>
+    <h2>Projects</h2>
     {render_projects(resume.get("projects", []))}
 
     <h2>Education</h2>
@@ -254,7 +281,7 @@ def build_html(resume: dict) -> str:
 
     <h2>Certifications & Achievements</h2>
     <ul>
-        {render_bullets(resume.get("certifications_and_achievements", []))}
+        {render_bullets(combined_certifications_and_achievements)}
     </ul>
 
 </body>
@@ -288,13 +315,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--html-output",
-        default="Subham_Dawn_Resume_Updated.html",
-        help="HTML output path.",
+        default=None,
+        help="HTML output filename (default: derived from profile name in YAML).",
     )
     parser.add_argument(
         "--pdf-output",
-        default="Subham_Dawn_Resume_Updated.pdf",
-        help="PDF output path.",
+        default=None,
+        help="PDF output filename (default: derived from profile name in YAML).",
     )
     return parser.parse_args()
 
@@ -312,8 +339,11 @@ def main() -> None:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    html_path = Path(args.html_output)
-    pdf_path = Path(args.pdf_output)
+    profile_name = resume.get("profile", {}).get("name", "Resume")
+    stem = profile_name.strip().replace(" ", "_")
+
+    html_path = Path(args.html_output) if args.html_output else Path(f"{stem}_Resume.html")
+    pdf_path = Path(args.pdf_output) if args.pdf_output else Path(f"{stem}_Resume.pdf")
 
     if not html_path.is_absolute():
         html_path = output_dir / html_path
