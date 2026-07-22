@@ -26,13 +26,13 @@ skills:
   - category: AI/ML
     items:
       - Generative AI
-      - LLMs (GPT-4/5)
+      - LLMs
       - LangChain
       - LangGraph
       - NLP
-      - Deep Learning (LSTM, CNN)
+      - MCP
+      - Deep Learning
       - RAG
-      - FAISS
   - category: Languages
     items:
       - Java
@@ -75,12 +75,12 @@ experience:
     location: Bengaluru
     duration: Jul 2022 - Present
     highlights:
-      - Designed an AI-powered healthcare provider search API using FastAPI, LangChain, FAISS, and Azure OpenAI, enabling semantic discovery across 53K+ providers with 4-5 second response latency.
-      - Built an AI-assisted QA automation platform with React, FastAPI, LangGraph, and Azure OpenAI, allowing testers to create and execute integration workflows through natural language commands and a drag-and-drop UI.
-      - Developed a Kubernetes log analysis assistant that leverages LLM agents to collect pod logs across multiple clusters, identify root causes, and recommend real-time fixes.
-      - Implemented internal RAG-based support chatbots integrated with databases, logs, and documentation, significantly reducing engineering investigation time and improving developer productivity.
+      - Designed an AI-powered healthcare provider search API using FastAPI, LangChain, FAISS, and Azure OpenAI, enabling semantic discovery across 53K+ providers.
+      - Architected an enterprise agentic AI digital worker using LangGraph, Azure OpenAI, and MCP to automate sprint intelligence, blocker detection, capacity forecasting, and governed autonomous execution.
+      - Built EDPS SkillHub, a TypeScript platform for packaging governed AI-agent skills across Copilot, Claude, and Codex with manifest/lockfile management and security-remediation workflows.
+      - Developed CodeForgeAI, a governed GitHub-native agentic delivery platform converting requirements into OpenSpec artifacts and enforcing PR-only, policy-gated delivery with extensible agent skills.
+      - Developed a Kubernetes log analysis assistant using LLM agents to collect pod logs across multiple clusters, identify root causes, and recommend real-time fixes.
       - Developed scalable backend services using Java, Spring Boot, Kafka, and Kubernetes, improving deployment reliability and reducing operational downtime by 25%.
-      - Automated database and release pipelines with Liquibase and Jenkins, reducing manual effort by 10 hours/week and deployment errors by 90%.
       - Created deep learning solutions for healthcare, including an LSTM model for patient readmission prediction, improving early risk detection.
   - role: Associate Consultant
     company: Oracle Financial Services Software
@@ -91,38 +91,32 @@ experience:
       - Built ML models for predicting missing data in financial datasets to ensure data integrity for client deliverables.
 
 projects:
+  - name: "Agentic AI Scrum Master Digital Worker"
+    highlights:
+      - Architected an enterprise agentic AI platform with seven capabilities—blocker analysis, sprint hygiene, capacity forecasting, reporting, and conversational routing—using LangGraph, Azure OpenAI, OpenAI Agents SDK, and MCP.
+      - Engineered evidence-grounded blocker and risk intelligence using typed LangGraph state graphs, provider-native evidence, confidence scoring, per-project contextual memory, and strict no-fabrication policies, reducing noisy escalations.
+      - Built a streaming conversational agent with the OpenAI Agents SDK, SSE, 16+ project-scoped tools, and hybrid deterministic/LLM routing; exposed governed business logic to VS Code agents and Copilot via a backend-mounted FastMCP server.
+      - Created a provider-agnostic MCP orchestration layer across GitHub, Confluence, Icarus, and Memory with credential-aware discovery, bounded concurrency, and a governed Digital Worker framework with approval-gated autonomous actions.
+      - Productionized with FastAPI, React/TypeScript, Docker, Kubernetes, Helm, CI/CD, Entra ID JWT/OAuth authentication, and per-user project-scoped data isolation.
+  - name: "EDPS SkillHub"
+    highlights:
+      - Built a Node.js/TypeScript CLI for discovery, installation, synchronization, and validation of reusable agent skills across Copilot, Claude, Codex, and generic runtimes using YAML manifests, versioned registries, SHA-256 checksums, and lockfiles.
+      - Authored agentic vulnerability-remediation workflows that normalize Security Platform findings, detect Maven, Gradle, npm, Poetry, pip, and uv ecosystems, and coordinate validation-gated pull requests across repositories.
+      - Implemented agent safety guardrails with prerequisite checks, dry-run planning, conflict detection, secret-handling policies, duplicate-PR prevention, and a 47-test automated suite covering CLI and state-reconciliation behavior.
+  - name: "CodeForgeAI | Governed Agentic Software Delivery Platform"
+    highlights:
+      - Architected a governed GitHub-native agentic delivery platform supporting /dw commands across explore, propose, breakdown, implement, review, QA, and archive stages with policy-enforced branch and PR workflows.
+      - Automated conversion of business requirements into OpenSpec artifacts—proposals, designs, tasks, and acceptance criteria—using an extensible skill registry and enterprise Azure OpenAI OAuth adapter with retry and secret redaction.
+      - Built reusable GitHub Actions composite workflows with risk-aware change classification, mandatory audit evidence, issue-scoped branching, and standardized governance outputs consumable across repositories.
   - name: AI-Powered Healthcare Provider Search API
     highlights:
-      - Architected a modular FastAPI service layer with asynchronous request handling, dependency injection, and structured exception management to support high-concurrency provider search workloads.
-      - Implemented NLP query extraction using LangChain and Azure OpenAI to parse natural language inputs, perform multi-source retrieval, and generate LLM-powered semantic match explanations across 53K+ providers.
-      - Implemented Redis-based caching and request throttling strategies, reducing repeated database lookups and improving response consistency under concurrent usage.
-      - Designed resilient fallback logic across CMS APIs, Oracle DB, and FAISS vector search services; supported JWT-based conversational refinement and cross-pod FAISS hot-reloading for high availability.
-      - Added centralized request tracing and structured logging, enabling faster production debugging and performance monitoring across distributed Kubernetes pods.
-  - name: AI-Assisted QA Automation Platform
-    highlights:
-      - Built a full-stack no-code platform using React, FastAPI, and LangGraph, enabling testers to create and execute integration test workflows through natural-language commands and a drag-and-drop UI.
-      - Engineered an asynchronous DAG execution engine supporting API, SSH, and database validation with parallel task orchestration, dependency resolution, retry handling, and execution state persistence.
-      - Designed YAML-based workflow serialization, allowing version-controlled test definitions and seamless migration across environments.
-      - Implemented role-based authentication, secure execution isolation, and websocket-based status streaming for real-time progress updates across backend and frontend.
-  - name: AI-Powered Kubernetes Log Analyzer
-    highlights:
-      - Developed a multi-cluster connection manager to securely handle Kubernetes credentials and namespace-level access across isolated environments.
-      - Implemented thread-safe session handling and memory management, allowing multiple users to perform concurrent log investigations without context leakage.
-      - Built streaming log ingestion pipelines to process large pod logs incrementally, preventing memory spikes during high-volume analysis.
-      - Integrated retry policies and timeout controls for unstable cluster connections to improve system reliability during incident analysis.
-  - name: ChatBot using OpenAI Services
-    highlights:
-      - Designed a retrieval pipeline to fetch data from databases, logs, and internal wiki sources, improving contextual response accuracy for enterprise support queries.
-      - Built RESTful backend services to process user prompts, vector search requests, and response orchestration between Azure OpenAI and internal systems.
-      - Implemented session-based conversation handling to preserve context across multi-turn interactions while maintaining user-level isolation.
-      - Added query caching and response optimization, reducing repeated retrieval overhead and improving response latency.
-      - Integrated authentication and access controls to ensure secure retrieval of sensitive enterprise operational data.
+      - Implemented NLP query extraction using LangChain and Azure OpenAI to parse natural language inputs, perform multi-source retrieval, and generate semantic match explanations across 53K+ providers.
+      - Built resilient fallback logic across CMS APIs, Oracle DB, and FAISS with Redis caching, JWT-based conversational refinement, and cross-pod hot-reloading for high availability.
+      - Added centralized request tracing and structured logging for faster production debugging across distributed Kubernetes pods.
   - name: Patient Readmission Prediction Project
     highlights:
-      - Developed data preprocessing pipelines to transform longitudinal patient records into time-series features for downstream LSTM model training.
-      - Built reusable Python service modules for data ingestion, embedding generation, model inference, and evaluation.
-      - Optimized large-scale medical code embedding workflows, reducing preprocessing time for high-volume healthcare datasets.
-      - Created a modular prediction workflow that could be exposed as a backend inference API for clinical decision support systems.
+      - Developed data preprocessing pipelines to transform longitudinal patient records into time-series features for LSTM model training, with optimized medical code embedding for high-volume healthcare datasets.
+      - Built modular Python service modules for data ingestion, model inference, and evaluation, designed to be exposed as a backend inference API for clinical decision support.
 
 education:
   - degree: Master of Engineering (CSE)
@@ -135,5 +129,5 @@ education:
     date: Jul 2016
 
 certifications_and_achievements:
-  - 'Achievements: 7x "Diamond in Innovation/Performance" awards for Generative AI search APIs, Patient Readmission models, and automated QA systems.'
+  - 'Achievements: 8x "Diamond in Innovation/Performance" awards for Generative AI search APIs, Patient Readmission models, automated QA systems, and bringing Digital Workers to life.'
   - 'Certifications: Advanced Java (Globsyn), Deep Learning (Udemy), Quantum Computing with Qiskit (Udemy).'
