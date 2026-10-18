@@ -11,6 +11,16 @@
 			]
 		},
 		{
+			"label": "Update OpenSpec Libraries",
+			"type": "shell",
+			"command": "npx",
+			"args": [
+				"--yes",
+				"@fission-ai/openspec@latest",
+				"update"
+			]
+		},
+		{
 			"label": "Build Resume",
 			"type": "shell",
 			"command": "poetry",
