@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import os
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -189,11 +190,16 @@ class ProfileUpdateTests(unittest.TestCase):
         return operations_path
 
     def updated_record(self, profile_dir: Path) -> str:
-        return (profile_dir / "record.md").read_text(encoding="utf-8") + (
+        return (
+            (profile_dir / "record.md")
+            .read_text(encoding="utf-8")
+            .replace("A project used in tests.", "An updated project used in tests.")
+            + (
             "\n- [test-impact] Improved service reliability.\n"
             "\n## Source notes\n"
             "`test-impact`: User-provided in conversation; imported 2026-10-20; "
             "locator: project details\n"
+            )
         )
 
     def test_stage_validates_candidate_and_does_not_modify_profile(self) -> None:
@@ -244,23 +250,101 @@ class ProfileUpdateTests(unittest.TestCase):
             with self.assertRaisesRegex(resume_tools.WorkflowError, "Unsafe profile record path"):
                 resume_tools.stage_profile_update(profile_dir, operations)
 
-    def test_promotion_rejects_stale_profile_without_overwriting_changes(self) -> None:
+    def test_promotion_allows_unrelated_profile_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            unrelated_record = profile_dir / "other.md"
+            unrelated_record.write_text(
+                """---
+id: other-record
+type: project
+title: Other Project
+summary: Another project.
+---
+
+## Evidence
+
+- [other-evidence] Original unrelated claim.
+""",
+                encoding="utf-8",
+            )
+            operations = self.write_operations(root, self.updated_record(profile_dir))
+            stage_dir, _, _ = resume_tools.stage_profile_update(profile_dir, operations)
+            unrelated_record.write_text(
+                unrelated_record.read_text(encoding="utf-8").replace(
+                    "Original unrelated claim.",
+                    "Updated unrelated wording without changing IDs or metadata.",
+                ),
+                encoding="utf-8",
+            )
+            marker = profile_dir / "local-note.txt"
+            marker.write_text("unrelated file", encoding="utf-8")
+            try:
+                changed = resume_tools.promote_profile_update(stage_dir, profile_dir)
+                self.assertIn("record.md", changed)
+                self.assertTrue(marker.exists())
+                self.assertIn(
+                    "Updated unrelated wording",
+                    unrelated_record.read_text(encoding="utf-8"),
+                )
+                self.assertIn("test-impact", (profile_dir / "record.md").read_text(encoding="utf-8"))
+            finally:
+                if stage_dir.exists():
+                    resume_tools.discard_profile_update(stage_dir, profile_dir)
+
+    def test_promotion_rejects_relevant_profile_change_without_overwriting_it(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             root = Path(temporary_directory)
             profile_dir = root / "profile"
             write_profile(profile_dir)
             operations = self.write_operations(root, self.updated_record(profile_dir))
             stage_dir, _, _ = resume_tools.stage_profile_update(profile_dir, operations)
-            marker = profile_dir / "external-change.txt"
-            marker.write_text("concurrent change", encoding="utf-8")
+            record_path = profile_dir / "record.md"
+            record_path.write_text(
+                record_path.read_text(encoding="utf-8").replace(
+                    "Built a tested Python service.",
+                    "Built a revised Python service.",
+                ),
+                encoding="utf-8",
+            )
             try:
                 with self.assertRaisesRegex(resume_tools.WorkflowError, "changed after the preview"):
                     resume_tools.promote_profile_update(stage_dir, profile_dir)
-                self.assertTrue(marker.exists())
-                self.assertNotIn(
-                    "test-impact",
-                    (profile_dir / "record.md").read_text(encoding="utf-8"),
+                self.assertIn(
+                    "revised Python service",
+                    record_path.read_text(encoding="utf-8"),
                 )
+                self.assertNotIn("test-impact", record_path.read_text(encoding="utf-8"))
+            finally:
+                resume_tools.discard_profile_update(stage_dir, profile_dir)
+
+    def test_promotion_rejects_global_evidence_id_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            operations = self.write_operations(root, self.updated_record(profile_dir))
+            stage_dir, _, _ = resume_tools.stage_profile_update(profile_dir, operations)
+            unrelated_record = profile_dir / "other.md"
+            unrelated_record.write_text(
+                """---
+id: other-record
+type: project
+title: Other Project
+summary: Another project.
+---
+
+- [new-global-evidence] A new claim changes global evidence IDs.
+""",
+                encoding="utf-8",
+            )
+            try:
+                with self.assertRaisesRegex(resume_tools.WorkflowError, "changed after the preview"):
+                    resume_tools.promote_profile_update(stage_dir, profile_dir)
+                self.assertTrue(unrelated_record.exists())
+                self.assertNotIn("test-impact", (profile_dir / "record.md").read_text(encoding="utf-8"))
             finally:
                 resume_tools.discard_profile_update(stage_dir, profile_dir)
 
@@ -290,6 +374,44 @@ class ProfileUpdateTests(unittest.TestCase):
                 self.assertEqual(record_path.read_bytes(), original_record)
                 self.assertFalse((profile_dir / "index.yaml").exists())
             finally:
+                resume_tools.discard_profile_update(stage_dir, profile_dir)
+
+    def test_promotion_retains_recovery_backup_when_rollback_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            record_path = profile_dir / "record.md"
+            original_record = record_path.read_bytes()
+            operations = self.write_operations(root, self.updated_record(profile_dir))
+            stage_dir, _, _ = resume_tools.stage_profile_update(profile_dir, operations)
+            real_replace = os.replace
+            replace_calls = 0
+            backup_dir: Path | None = None
+            error_text = ""
+
+            def fail_index_and_rollback(source: object, destination: object) -> None:
+                nonlocal replace_calls
+                replace_calls += 1
+                if replace_calls in {2, 3}:
+                    raise OSError("simulated promotion/rollback failure")
+                real_replace(source, destination)
+
+            try:
+                with patch.object(resume_tools.os, "replace", side_effect=fail_index_and_rollback):
+                    with self.assertRaisesRegex(
+                        resume_tools.WorkflowError,
+                        "Recovery backups retained at",
+                    ) as error:
+                        resume_tools.promote_profile_update(stage_dir, profile_dir)
+                error_text = str(error.exception)
+                backup_dir = Path(error_text.split("Recovery backups retained at ", 1)[1].rstrip("."))
+                self.assertTrue((backup_dir / "record.md").is_file())
+                self.assertEqual((backup_dir / "record.md").read_bytes(), original_record)
+                self.assertIn("test-impact", record_path.read_text(encoding="utf-8"))
+            finally:
+                if backup_dir is not None:
+                    shutil.rmtree(backup_dir, ignore_errors=True)
                 resume_tools.discard_profile_update(stage_dir, profile_dir)
 
     def test_successful_promotion_updates_records_and_index(self) -> None:

@@ -77,6 +77,6 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
      --profile-dir profile --stage-dir <stage_dir>
    ```
 
-   The helper rejects stale profile state, revalidates the staged candidate/index, and uses backups with rollback on ordinary promotion errors. If the profile changed after preview, regenerate and validate the candidate, show the new diff, and request approval again. Never use stale approval.
-5. Report promotion and run `poetry run python resume_tools.py validate-profile` after success. Report validation, promotion, or rollback errors and affected paths explicitly. Multi-file promotion is not crash-atomic.
+   The helper rejects stale affected-record or profile-wide evidence-ID/index state, revalidates the staged candidate/index, and uses backups with rollback on ordinary promotion errors. Unrelated files and unrelated claim wording changes do not invalidate the preview. If relevant profile state changed after preview, regenerate and validate the candidate, show the new diff, and request approval again. Never use stale approval.
+5. Report promotion and run `poetry run python resume_tools.py validate-profile` after success. Report validation, promotion, or rollback errors and affected paths explicitly; if rollback fails, retain and report the recovery-backup directory. Multi-file promotion is not crash-atomic.
 6. Remove the temporary operations JSON after staging. On success the helper removes the stage; discard it on decline. Never retain source documents in the repository.

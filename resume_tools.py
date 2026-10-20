@@ -276,6 +276,52 @@ def profile_tree_snapshot(profile_dir: Path) -> dict[str, str]:
     return snapshot
 
 
+def profile_dependency_fingerprint(profile_dir: Path) -> str:
+    root = profile_dir.resolve()
+    records = profile_records(profile_dir)
+    metadata_records, evidence_ids = validate_profile(profile_dir)
+    record_dependencies = []
+    for path, metadata, body in records:
+        record_dependencies.append(
+            {
+                "path": path.resolve().relative_to(root).as_posix(),
+                "record_id": metadata["id"],
+                "evidence_ids": sorted(
+                    match.group(1) for match in EVIDENCE_LINE.finditer(body)
+                ),
+            }
+        )
+    payload = {
+        "records": metadata_records,
+        "record_dependencies": record_dependencies,
+        "all_ids": sorted(evidence_ids),
+    }
+    serialized = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+
+def selected_profile_snapshot(profile_dir: Path, relative_paths: set[str]) -> dict[str, str | None]:
+    root = profile_dir.resolve()
+    if profile_dir.is_symlink() or not root.is_dir():
+        raise WorkflowError(f"Profile directory not found or unsafe: {profile_dir}")
+
+    snapshot: dict[str, str | None] = {}
+    for relative_path in sorted(relative_paths):
+        if relative_path == "index.yaml":
+            path = root / relative_path
+            if path.is_symlink():
+                raise WorkflowError(f"Profile index is an unsafe symbolic link: {path}")
+        else:
+            path = checked_profile_record_path(root, relative_path)
+        if not path.exists():
+            snapshot[relative_path] = None
+            continue
+        if not path.is_file():
+            raise WorkflowError(f"Profile update path is not a regular file: {path}")
+        snapshot[relative_path] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return snapshot
+
+
 def checked_profile_record_path(root: Path, relative_path: str) -> Path:
     relative = PurePosixPath(relative_path)
     if (
@@ -331,7 +377,9 @@ def stage_profile_update(
         raise WorkflowError("Profile update contains duplicate or conflicting paths.")
 
     profile_root = profile_dir.resolve()
-    original_snapshot = profile_tree_snapshot(profile_dir)
+    promote_paths = write_paths | delete_paths | {"index.yaml"}
+    original_paths = selected_profile_snapshot(profile_dir, promote_paths)
+    original_dependencies = profile_dependency_fingerprint(profile_dir)
     stage_dir = Path(tempfile.mkdtemp(prefix="resume-profile-update-"))
     candidate_dir = stage_dir / "profile"
     try:
@@ -349,10 +397,26 @@ def stage_profile_update(
         records, _ = validate_profile(candidate_dir)
         write_index(candidate_dir, None)
         candidate_snapshot = profile_tree_snapshot(candidate_dir)
+        current_paths = selected_profile_snapshot(profile_dir, promote_paths)
+        current_dependencies = profile_dependency_fingerprint(profile_dir)
+        if current_paths != original_paths or current_dependencies != original_dependencies:
+            raise WorkflowError(
+                "Profile changed while staging the update. Rebuild the candidate from the current profile."
+            )
+        candidate_paths = selected_profile_snapshot(candidate_dir, promote_paths)
+        changed = sorted(
+            path
+            for path in promote_paths
+            if original_paths.get(path) != candidate_paths.get(path)
+        )
+        if not changed:
+            raise WorkflowError("Profile update contains no changes.")
         manifest = {
-            "version": 1,
+            "version": 2,
             "profile_root": str(profile_root),
-            "original_snapshot": original_snapshot,
+            "original_paths": original_paths,
+            "dependency_fingerprint": original_dependencies,
+            "promote_paths": changed,
             "candidate_snapshot": candidate_snapshot,
         }
         (stage_dir / "manifest.json").write_text(
@@ -360,13 +424,6 @@ def stage_profile_update(
             encoding="utf-8",
         )
 
-        changed = sorted(
-            path
-            for path in set(original_snapshot) | set(candidate_snapshot)
-            if original_snapshot.get(path) != candidate_snapshot.get(path)
-        )
-        if not changed:
-            raise WorkflowError("Profile update contains no changes.")
         diff_parts: list[str] = []
         for relative_path in changed:
             if not relative_path.endswith(".md") and relative_path != "index.yaml":
@@ -408,20 +465,51 @@ def read_profile_update_stage(stage_dir: Path, profile_dir: Path) -> tuple[Path,
         raise WorkflowError(f"Invalid profile update staging manifest: {exc}") from exc
     if (
         not isinstance(manifest, dict)
-        or manifest.get("version") != 1
+        or manifest.get("version") != 2
         or manifest.get("profile_root") != str(profile_dir.resolve())
-        or not isinstance(manifest.get("original_snapshot"), dict)
+        or not isinstance(manifest.get("original_paths"), dict)
+        or not isinstance(manifest.get("dependency_fingerprint"), str)
+        or not isinstance(manifest.get("promote_paths"), list)
         or not isinstance(manifest.get("candidate_snapshot"), dict)
         or not candidate_dir.is_dir()
     ):
         raise WorkflowError(f"Profile update staging manifest does not match {profile_dir}.")
+    original_paths = manifest["original_paths"]
+    promote_paths = manifest["promote_paths"]
+    if not all(
+        isinstance(path, str)
+        and (path == "index.yaml" or checked_profile_record_path(candidate_dir, path))
+        and (digest is None or isinstance(digest, str))
+        for path, digest in original_paths.items()
+    ):
+        raise WorkflowError("Profile update staging manifest contains invalid source paths or digests.")
+    if (
+        not promote_paths
+        or not all(isinstance(path, str) for path in promote_paths)
+        or len(promote_paths) != len(set(promote_paths))
+        or not all(path in original_paths for path in promote_paths)
+    ):
+        raise WorkflowError("Profile update staging manifest contains invalid promotion paths.")
+    expected_promote_paths = {
+        path
+        for path, original_digest in original_paths.items()
+        if original_digest != manifest["candidate_snapshot"].get(path)
+    }
+    if set(promote_paths) != expected_promote_paths:
+        raise WorkflowError("Profile update staging manifest promotion paths do not match the candidate.")
     return candidate_dir, manifest
 
 
 def promote_profile_update(stage_dir: Path, profile_dir: Path) -> list[str]:
     candidate_dir, manifest = read_profile_update_stage(stage_dir, profile_dir)
-    current_snapshot = profile_tree_snapshot(profile_dir)
-    if current_snapshot != manifest["original_snapshot"]:
+    original_paths = manifest["original_paths"]
+    promote_paths = set(manifest["promote_paths"])
+    current_paths = selected_profile_snapshot(profile_dir, set(original_paths))
+    current_dependencies = profile_dependency_fingerprint(profile_dir)
+    if (
+        current_paths != original_paths
+        or current_dependencies != manifest["dependency_fingerprint"]
+    ):
         raise WorkflowError(
             "Profile changed after the preview. Rebuild and validate the candidate, then request approval again."
         )
@@ -437,11 +525,7 @@ def promote_profile_update(stage_dir: Path, profile_dir: Path) -> list[str]:
     ):
         raise WorkflowError("Staged profile candidate index is missing or inconsistent.")
 
-    changed = sorted(
-        path
-        for path in set(current_snapshot) | set(candidate_snapshot)
-        if current_snapshot.get(path) != candidate_snapshot.get(path)
-    )
+    changed = sorted(promote_paths)
     if not changed:
         raise WorkflowError("Staged profile update has no changes to promote.")
     write_order = [path for path in changed if path != "index.yaml"]
@@ -451,14 +535,18 @@ def promote_profile_update(stage_dir: Path, profile_dir: Path) -> list[str]:
     backup_dir = Path(tempfile.mkdtemp(prefix="resume-profile-backup-"))
     applied: list[str] = []
     root = profile_dir.resolve()
+    preserve_backup = False
     try:
         for relative_path in changed:
-            if relative_path in current_snapshot:
+            if original_paths[relative_path] is not None:
                 backup = backup_dir / relative_path
                 backup.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(root / relative_path, backup)
 
-        if profile_tree_snapshot(profile_dir) != manifest["original_snapshot"]:
+        if (
+            selected_profile_snapshot(profile_dir, set(original_paths)) != original_paths
+            or profile_dependency_fingerprint(profile_dir) != manifest["dependency_fingerprint"]
+        ):
             raise WorkflowError(
                 "Profile changed during promotion preparation. Rebuild the candidate and request approval again."
             )
@@ -496,7 +584,7 @@ def promote_profile_update(stage_dir: Path, profile_dir: Path) -> list[str]:
             destination = root / relative_path
             try:
                 backup = backup_dir / relative_path
-                if relative_path in current_snapshot:
+                if original_paths[relative_path] is not None:
                     replace_from(
                         backup,
                         destination,
@@ -508,12 +596,18 @@ def promote_profile_update(stage_dir: Path, profile_dir: Path) -> list[str]:
                 rollback_errors.append(f"{relative_path}: {rollback_exc}")
         details = f"Profile promotion failed: {exc}. "
         if rollback_errors:
-            details += "Rollback failures: " + "; ".join(rollback_errors)
+            preserve_backup = True
+            details += (
+                "Rollback failures: "
+                + "; ".join(rollback_errors)
+                + f". Recovery backups retained at {backup_dir}."
+            )
         else:
             details += "Changes were rolled back."
         raise WorkflowError(details) from exc
     finally:
-        shutil.rmtree(backup_dir, ignore_errors=True)
+        if not preserve_backup:
+            shutil.rmtree(backup_dir, ignore_errors=True)
 
     try:
         shutil.rmtree(stage_dir)
