@@ -19,5 +19,8 @@ env/
 
 # Generated resume artifacts
 generated/
+/profile/index.yaml
 *.pdf
 *.html
+
+profile/*

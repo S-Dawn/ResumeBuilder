@@ -43,7 +43,9 @@ The skill invokes deterministic Python tooling to rebuild/validate the index, va
 
 Each application draft directory under `generated/` contains the tailored `resume.yaml`, a source-mapping manifest, `fit-report.md`, rendered HTML, and PDF. The source map associates each tailored content item with one or more profile evidence IDs. The fit report maps major JD requirements to supporting evidence and identifies unsupported or weakly supported requirements without reproducing the full JD.
 
-Never overwrite the canonical profile or root `resume.yaml`. On an existing application path, ask whether to create a numbered draft, explicitly replace the existing draft, or cancel. If interaction is unavailable, cancel without writing over existing files. Retain generated artifacts when validation or page-fit fails, mark/report the draft as failed, and never present it as ready to submit. Do not include the full JD in retained artifacts by default.
+Require the fit report to contain `Evidence-backed matches` and `Unsupported or weakly supported requirements` sections. Each matched item cites one or more known evidence IDs; unsupported/weak entries are explicitly labeled, and weak entries may cite evidence IDs.
+
+Never overwrite the canonical profile or root `resume.yaml`. On an existing application path, ask whether to create a numbered draft, explicitly replace the existing draft, or cancel. If interaction is unavailable, cancel without writing over existing files. The render helper accepts only a direct child of the configured generated-output root, rejecting arbitrary paths and symlinks. Retain generated artifacts when validation or page-fit fails, mark/report the draft as failed, and never present it as ready to submit. Do not include the full JD in retained artifacts by default.
 
 ### Validate the YAML contract before rendering
 
@@ -57,7 +59,7 @@ For retries, progressively reduce the lowest-relevance evidence bullets/projects
 
 ### Define ATS-oriented checks without claiming universal compatibility
 
-Keep a text-based, single-column layout with conventional section headings and stable document reading order. Deterministic checks verify one column, extractable/selectable PDF text, expected headings/order, and no unsupported YAML fields. These are measurable ATS-oriented safeguards, not a guarantee that every ATS vendor parses the document identically. Semantic relevance and factual fidelity are reviewed with role-distinct Copilot smoke cases and a human reviewer rather than an asserted model score.
+Keep a text-based, single-column layout with conventional section headings and stable document reading order. Deterministic checks verify that the actual PDF text positions do not show repeated left/right column flows, along with extractable/selectable PDF text, expected headings/order, and no unsupported YAML fields. HTML is also checked for unsupported multi-column constructs. These are measurable ATS-oriented safeguards, not a guarantee that every ATS vendor parses the document identically. Semantic relevance and factual fidelity are reviewed with role-distinct Copilot smoke cases and a human reviewer rather than an asserted model score.
 
 ### Document Copilot data handling
 

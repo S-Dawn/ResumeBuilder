@@ -5,6 +5,7 @@ import html
 from pathlib import Path
 
 import yaml
+from pypdf import PdfReader
 from weasyprint import HTML
 
 CSS_STYLES = """
@@ -162,15 +163,14 @@ def render_experience(experience: list[dict]) -> str:
         highlights = "\n".join(
             f"<li>{esc(str(highlight))}</li>" for highlight in item.get("highlights", [])
         )
+        highlight_list = f"<ul>{highlights}</ul>" if highlights else ""
 
         blocks.append(
             f"""
     <div class=\"experience-item\">
         <div class=\"item-header\"><span>{role}</span><span>{duration}</span></div>
         <div class=\"item-sub\">{company_line}</div>
-        <ul>
-            {highlights}
-        </ul>
+        {highlight_list}
     </div>
         """
         )
@@ -260,6 +260,36 @@ def build_html(resume: dict) -> str:
             f'Certifications: {"; ".join(certifications)}'
         )
 
+    sections: list[str] = []
+    if isinstance(summary, str) and summary.strip():
+        sections.append(f'<h2>Professional Summary</h2>\n    <p>{esc(summary)}</p>')
+
+    skills = resume.get("skills", [])
+    if skills:
+        sections.append(f"<h2>Technical Skills</h2>\n    {render_skills(skills)}")
+
+    if experience:
+        sections.append(
+            f"<h2>Professional Experience{get_experience_years_label(experience_years)}</h2>\n"
+            f"    {render_experience(experience)}"
+        )
+
+    projects = resume.get("projects", [])
+    if projects:
+        sections.append(f"<h2>Projects</h2>\n    {render_projects(projects)}")
+
+    education = resume.get("education", [])
+    if education:
+        sections.append(f"<h2>Education</h2>\n    {render_education(education)}")
+
+    if combined_certifications_and_achievements:
+        sections.append(
+            "<h2>Certifications &amp; Achievements</h2>\n"
+            f"    <ul>{render_bullets(combined_certifications_and_achievements)}</ul>"
+        )
+
+    sections_html = "\n\n    ".join(sections)
+
     return f"""
 <!DOCTYPE html>
 <html lang=\"en\">
@@ -277,29 +307,98 @@ def build_html(resume: dict) -> str:
         <div class=\"contact-info\">{build_contact_line(profile)}</div>
     </div>
 
-    <h2>Professional Summary</h2>
-    <p>{esc(resume.get("summary", ""))}</p>
-
-    <h2>Technical Skills</h2>
-    {render_skills(resume.get("skills", []))}
-
-    <h2>Professional Experience{get_experience_years_label(experience_years)}</h2>
-    {render_experience(experience)}
-
-    <h2>Projects</h2>
-    {render_projects(resume.get("projects", []))}
-
-    <h2>Education</h2>
-    {render_education(resume.get("education", []))}
-
-    <h2>Certifications & Achievements</h2>
-    <ul>
-        {render_bullets(combined_certifications_and_achievements)}
-    </ul>
+    {sections_html}
 
 </body>
 </html>
 """
+
+
+def validate_pdf_output(pdf_path: Path, resume: dict, html_content: str) -> int:
+    lowered_html = html_content.lower()
+    if (
+        "<table" in lowered_html
+        or "column-count" in lowered_html
+        or "grid-template-columns" in lowered_html
+    ):
+        raise ValueError("Generated HTML is not a supported single-column layout.")
+
+    reader = PdfReader(str(pdf_path))
+    page_count = len(reader.pages)
+    if page_count != 1:
+        return page_count
+
+    text_fragments: list[tuple[str, float, float]] = []
+
+    def collect_text_position(
+        text: str,
+        _current_matrix: list[float],
+        text_matrix: list[float],
+        _font_dictionary: dict | None,
+        _font_size: float,
+    ) -> None:
+        if text.strip():
+            text_fragments.append((text, float(text_matrix[4]), float(text_matrix[5])))
+
+    extracted_text = "\n".join(
+        page.extract_text(visitor_text=collect_text_position) or "" for page in reader.pages
+    )
+    if not extracted_text.strip():
+        raise ValueError("Generated PDF contains no extractable text.")
+
+    expected_headings: list[str] = []
+    if isinstance(resume.get("summary"), str) and resume["summary"].strip():
+        expected_headings.append("Professional Summary")
+    if resume.get("skills"):
+        expected_headings.append("Technical Skills")
+    if resume.get("experience"):
+        expected_headings.append("Professional Experience")
+    if resume.get("projects"):
+        expected_headings.append("Projects")
+    if resume.get("education"):
+        expected_headings.append("Education")
+    if resume.get("certifications_and_achievements"):
+        expected_headings.append("Certifications & Achievements")
+
+    normalized_text = " ".join(extracted_text.split()).casefold()
+    previous_index = -1
+    for heading in expected_headings:
+        current_index = normalized_text.find(heading.casefold(), previous_index + 1)
+        if current_index < 0:
+            raise ValueError(f"Generated PDF is missing expected heading: {heading}")
+        previous_index = current_index
+
+    if expected_headings:
+        first_heading = expected_headings[0].casefold()
+        body_start = next(
+            (
+                y
+                for text, _x, y in text_fragments
+                if first_heading in text.casefold()
+            ),
+            None,
+        )
+        if body_start is None:
+            raise ValueError("Could not locate the first section heading in the PDF text layout.")
+
+        page_width = float(reader.pages[0].mediabox.width)
+        rows: dict[int, set[str]] = {}
+        for text, x, y in text_fragments:
+            if y < body_start:
+                continue
+            row_key = round(y / 2)
+            columns = rows.setdefault(row_key, set())
+            if x < page_width * 0.45:
+                columns.add("left")
+            elif x > page_width * 0.55:
+                columns.add("right")
+        split_rows = sum(1 for columns in rows.values() if {"left", "right"} <= columns)
+        if split_rows >= 4:
+            raise ValueError(
+                "Generated PDF text placement indicates a multi-column body layout."
+            )
+
+    return page_count
 
 
 def load_resume_data(yaml_path: Path) -> dict:
@@ -336,6 +435,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="PDF output filename (default: derived from profile name in YAML).",
     )
+    parser.add_argument(
+        "--strict-one-page",
+        action="store_true",
+        help="Fail unless the generated PDF is one page with extractable text and expected headings.",
+    )
     return parser.parse_args()
 
 
@@ -368,6 +472,12 @@ def main() -> None:
 
     html_path.write_text(html_content, encoding="utf-8")
     HTML(str(html_path)).write_pdf(str(pdf_path))
+    if args.strict_one_page:
+        page_count = validate_pdf_output(pdf_path, resume, html_content)
+        if page_count != 1:
+            raise ValueError(
+                f"Strict one-page validation failed: generated PDF has {page_count} pages."
+            )
 
 
 if __name__ == "__main__":

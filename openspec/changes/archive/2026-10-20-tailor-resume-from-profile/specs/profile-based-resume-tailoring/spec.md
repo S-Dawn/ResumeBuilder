@@ -56,7 +56,7 @@ The skill MAY substantially rewrite or reorder evidence for clarity and role rel
 - **THEN** the workflow presents it for human review and does not describe it as approved or submit it externally
 
 ### Requirement: Generate a fit report without retaining the full job description
-Each application draft SHALL include a fit report mapping major job requirements to supporting profile evidence and identifying unsupported or weakly supported requirements. Generated artifacts SHALL NOT include the full job description by default.
+Each application draft SHALL include a fit report with `Evidence-backed matches` and `Unsupported or weakly supported requirements` sections. Matched requirements SHALL cite one or more valid profile evidence IDs; unsupported and weakly supported requirements SHALL be explicitly labeled, with evidence IDs included for weak support when applicable. Generated artifacts SHALL NOT include the full job description by default.
 
 #### Scenario: Map requirements to evidence
 - **WHEN** the skill generates an application draft
@@ -100,7 +100,7 @@ Documentation SHALL explain that selected profile records and the supplied job d
 - **THEN** they are informed which personal content is supplied to Copilot and advised not to include secrets
 
 ### Requirement: Produce measurable ATS-oriented output
-Tailored output SHALL use a text-based single-column layout with conventional section headings and stable reading order. Deterministic validation SHALL check generated YAML fields and the rendered PDF's selectable/extractable text, expected headings/order, and page count. The system SHALL NOT claim universal compatibility with all ATS vendors.
+Tailored output SHALL use a text-based single-column layout with conventional section headings and stable reading order. Deterministic validation SHALL check generated YAML fields and the rendered PDF's selectable/extractable text, expected headings/order, PDF text placement for repeated multi-column body flow, and page count. The system SHALL NOT claim universal compatibility with all ATS vendors.
 
 #### Scenario: Validate ATS-oriented structure
 - **WHEN** a tailored PDF is generated
