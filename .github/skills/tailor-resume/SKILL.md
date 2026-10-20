@@ -42,7 +42,12 @@ Never modify the profile or repository-root `resume.yaml`.
    ```
 
    Use `None identified` only when that section has no entries. Every evidence ID must exist in the profile.
-2. Generate a complete `resume.yaml` using only the renderer's supported fields and the selected evidence. Broad rewriting and reordering are allowed, but do not invent or alter facts such as metrics, dates, tools, responsibilities, or outcomes.
+2. Generate a complete `resume.yaml` using only the renderer's supported fields and the selected evidence. Build a ranked pool of relevant evidence before writing:
+   - First pass: direct matches to core job requirements and the strongest role-aligned achievements.
+   - Next passes: moderately related evidence with impactful contributions, concrete outcomes, scale, or transferable skills.
+   - Final pass: other complementary evidence only when it adds distinct value and there is room.
+
+   Begin with the strongest evidence, then use render-review iterations to consider the next most valuable omitted items rather than treating the first selection as final. Favor concrete outcomes and meaningful contributions over redundant keyword lists. Use relevant evidence to avoid substantial unused page space, but never add filler, duplicate claims, or unsupported facts. Broad rewriting and reordering are allowed, but do not invent or alter facts such as metrics, dates, tools, responsibilities, or outcomes.
 3. Generate `source-map.json` with this exact structure:
 
    ```json
@@ -78,9 +83,9 @@ The render command accepts only a direct child of `generated/`; do not pass anot
 
 The helper rebuilds/validates the profile, validates YAML fields and source mappings, renders HTML/PDF, and checks actual page count and extractable PDF text. It writes `status.json`. A successful result must report `validated`; a failed result must remain clearly marked `failed`. If the helper fails or is unavailable, report the failure and never claim validation succeeded.
 
-If the PDF exceeds one page, update the YAML and matching source map, then run the next sequential attempt, up to attempt 4 (three retries after the initial render). The strict PDF check verifies page count, extractable text, expected heading order, and text placement indicative of a single-column body. Progressively remove the lowest-relevance evidence bullets/projects first, then condense summary, skills, and other optional content. Preserve contact details and employment role/company/date chronology. Do not silently shrink typography. Empty sections must not leave headings behind.
+After the initial render, use up to seven sequential revisions (eight total render attempts) to improve page fit while preserving readability. On each iteration, review the rendered page and the remaining ranked evidence pool. If substantial usable space remains, add the strongest omitted evidence from the next relevance tier, prioritizing impactful contributions and outcomes; update the matching source map and fit report. If a PDF exceeds one page, remove the lowest marginal-value evidence first, then condense summary, skills, and other optional content. Re-render after each change with the next sequential attempt. Continue through relevance tiers until the page is well balanced, no distinct supported evidence would improve role fit, the next addition would exceed one page or reduce readability, or the retry budget is exhausted. Stop early when another iteration would not materially improve the resume. Never add filler. The strict PDF check verifies page count, extractable text, expected heading order, and text placement indicative of a single-column body. Preserve contact details and employment role/company/date chronology. Do not silently shrink typography. Empty sections must not leave headings behind.
 
-If the fourth render still fails, retain all draft artifacts, explain the validation failure, and do not present the draft as ready to submit.
+If the eighth render still fails, retain all draft artifacts, explain the validation failure, and do not present the draft as ready to submit.
 
 ## Human review
 

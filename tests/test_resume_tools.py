@@ -575,7 +575,7 @@ class DraftTests(unittest.TestCase):
         self.assertNotIn("<h2>Projects</h2>", html_content)
         self.assertNotIn("<ul>\n            \n        </ul>", html_content)
 
-    def test_four_failed_page_attempts_are_retained_and_fifth_is_rejected(self) -> None:
+    def test_eight_failed_page_attempts_are_retained_and_ninth_is_rejected(self) -> None:
         class TwoPageHtml:
             def __init__(self, *_args: object, **_kwargs: object) -> None:
                 pass
@@ -597,7 +597,7 @@ class DraftTests(unittest.TestCase):
             write_draft_files(draft_dir, profile_dir)
 
             with patch.object(resume_tools, "HTML", TwoPageHtml):
-                for attempt in range(1, 5):
+                for attempt in range(1, resume_tools.MAX_RENDER_ATTEMPTS + 1):
                     with self.assertRaises(resume_tools.PageFitError):
                         resume_tools.render_draft(
                             draft_dir,
@@ -605,17 +605,21 @@ class DraftTests(unittest.TestCase):
                             attempt,
                             generated_root=root / "generated",
                         )
-                with self.assertRaisesRegex(resume_tools.WorkflowError, "between 1 and 4"):
+                rejected_attempt = resume_tools.MAX_RENDER_ATTEMPTS + 1
+                with self.assertRaisesRegex(
+                    resume_tools.WorkflowError,
+                    f"between 1 and {resume_tools.MAX_RENDER_ATTEMPTS}",
+                ):
                     resume_tools.render_draft(
                         draft_dir,
                         profile_dir,
-                        5,
+                        rejected_attempt,
                         generated_root=root / "generated",
                     )
 
             status = json.loads((draft_dir / "status.json").read_text(encoding="utf-8"))
             self.assertEqual(status["state"], "failed")
-            self.assertEqual(status["render_attempts"], 4)
+            self.assertEqual(status["render_attempts"], resume_tools.MAX_RENDER_ATTEMPTS)
             self.assertEqual(status["page_count"], 2)
             self.assertTrue((draft_dir / "resume.yaml").exists())
             self.assertTrue((draft_dir / "resume.pdf").exists())

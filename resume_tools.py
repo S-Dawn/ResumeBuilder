@@ -45,6 +45,7 @@ FIT_GAP = re.compile(
 )
 FIT_EVIDENCE_ID = re.compile(r"`([a-z0-9]+(?:-[a-z0-9]+)*)`")
 REQUIRED_METADATA = ("id", "type", "title", "summary")
+MAX_RENDER_ATTEMPTS = 8
 OPTIONAL_METADATA = (
     "employer",
     "role",
@@ -935,9 +936,14 @@ def render_draft(
         )
     status = read_status(draft_dir)
     previous_attempt = status.get("render_attempts", 0)
-    if not isinstance(previous_attempt, int) or attempt != previous_attempt + 1 or attempt > 4:
+    if (
+        not isinstance(previous_attempt, int)
+        or attempt != previous_attempt + 1
+        or attempt > MAX_RENDER_ATTEMPTS
+    ):
         raise WorkflowError(
-            f"Render attempt must be sequential and between 1 and 4; previous attempt was {previous_attempt}."
+            f"Render attempt must be sequential and between 1 and {MAX_RENDER_ATTEMPTS}; "
+            f"previous attempt was {previous_attempt}."
         )
 
     status.update({"state": "failed", "render_attempts": attempt})

@@ -114,8 +114,23 @@ Tailored output SHALL use a text-based single-column layout with conventional se
 - **WHEN** a resume section has no content, including after trimming
 - **THEN** the renderer omits its heading and wrapper while preserving the order of sections that do contain content
 
+### Requirement: Prioritize strong role-fit evidence and use page space effectively
+For each tailored draft, the workflow SHALL select the strongest supported experience, project, and achievement evidence that complements both the candidate's background and the target role. It SHALL map major job requirements to evidence, favor concrete outcomes and meaningful contributions over redundant keyword lists, and use relevant evidence to avoid substantial unused space on an otherwise readable one-page resume. It SHALL NOT add filler, duplicate claims, or unsupported facts to increase length. Page utilization SHALL NOT come at the expense of readability, factual traceability, or the one-page limit.
+
+#### Scenario: Enrich a sparse one-page draft
+- **WHEN** a rendered draft fits on one page but leaves substantial usable space and relevant supported evidence was omitted
+- **THEN** the workflow considers omitted evidence in relevance tiers, adds the strongest item that materially improves the role fit without harming page fit or readability, updates its source mappings, and re-renders
+
+#### Scenario: No relevant evidence remains
+- **WHEN** a one-page draft has substantial unused space but no additional relevant, supported evidence
+- **THEN** the workflow does not add filler or weaken the role fit merely to occupy space
+
+#### Scenario: Progress from direct to moderate-fit evidence
+- **WHEN** the strongest direct evidence has been included and the one-page draft has room for further content
+- **THEN** the workflow reviews moderately related evidence with impactful contributions or concrete outcomes, followed by other complementary evidence, adding only non-redundant items that strengthen the application
+
 ### Requirement: Verify strict one-page output with bounded retries
-The tailoring workflow SHALL verify the actual rendered PDF contains exactly one page. After an initial render that exceeds one page, the workflow SHALL make at most three content-trimming retries, progressively removing or shortening lower-relevance evidence first and then condensing the summary, skills, and other optional content. It SHALL preserve contact details and employment role/company/date chronology. If the final attempt still exceeds one page, it SHALL report failure and SHALL NOT report successful generation.
+The tailoring workflow SHALL verify the actual rendered PDF contains exactly one page. After the initial render, it SHALL allow at most seven sequential content revisions, for up to eight total render attempts. It SHALL iteratively improve page fit: add the strongest omitted role-fit evidence in successive relevance tiers when a draft has substantial usable whitespace, and remove or shorten lower marginal-value content when a draft exceeds one page. When trimming, it SHALL reduce lower-relevance evidence first and then condense the summary, skills, and other optional content. It SHALL preserve contact details and employment role/company/date chronology, maintain readability, and update source mappings for every content change. The workflow MAY stop before exhausting retries when the page is well balanced, no distinct supported evidence would improve role fit, the next addition would exceed one page or harm readability, or another iteration would not materially improve the resume. If the final attempt still fails page validation, it SHALL report failure and SHALL NOT report successful generation.
 
 #### Scenario: Resume fits on the initial render
 - **WHEN** the initial rendered PDF contains exactly one page and passes required checks
@@ -125,6 +140,10 @@ The tailoring workflow SHALL verify the actual rendered PDF contains exactly one
 - **WHEN** the initial PDF exceeds one page but a content-trimming retry fits
 - **THEN** the workflow re-renders, checks the actual PDF, and reports success only after exactly-one-page validation
 
+#### Scenario: Improve page utilization across relevance tiers
+- **WHEN** a draft fits on one page but substantial usable space remains and stronger relevant evidence is available
+- **THEN** the workflow uses successive revisions to consider direct, moderately related but impactful, and other complementary evidence in order, stopping when the page is well balanced, further additions would harm readability or exceed one page, no worthwhile evidence remains, or eight total render attempts have been reached
+
 #### Scenario: Protected content prevents one-page fit
-- **WHEN** protected contact details and employment chronology still exceed one page after three retries
+- **WHEN** protected contact details and employment chronology still exceed one page after seven retries
 - **THEN** the workflow retains and marks the artifacts failed, explains the page-count result, and does not claim successful generation
