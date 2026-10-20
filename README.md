@@ -66,6 +66,8 @@ poetry run python resume_tools.py validate-profile
 poetry run python resume_tools.py profile-index
 ```
 
+Use the **Maintain Profile** Copilot skill for full-resume or career-fact consolidation, and **Update Projects** for focused changes to project records. Both preview and validate the complete update before requesting explicit approval; neither treats a tailored application resume as a canonical source. File and selected project-repository content is sent to the configured Copilot model only after disclosure and confirmation.
+
 ## Renderer YAML structure
 
 The renderer uses `highlights` for experience and project bullets:

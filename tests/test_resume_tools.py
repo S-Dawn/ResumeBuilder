@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -131,6 +132,182 @@ summary: Another project.
             path.write_text(path.read_text(encoding="utf-8") + "\n- Missing evidence id.\n", encoding="utf-8")
             with self.assertRaisesRegex(resume_tools.WorkflowError, "stable \\[evidence-id\\]"):
                 resume_tools.validate_profile(profile_dir)
+
+    def test_profile_validation_accepts_keyed_source_notes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            profile_dir = Path(temporary_directory) / "profile"
+            write_profile(profile_dir)
+            path = profile_dir / "record.md"
+            path.write_text(
+                path.read_text(encoding="utf-8")
+                + "\n## Source notes\n"
+                "`test-evidence`: User-provided in conversation; imported 2026-10-20; "
+                "locator: project details\n",
+                encoding="utf-8",
+            )
+
+            records, evidence_ids = resume_tools.validate_profile(profile_dir)
+
+        self.assertEqual(len(records), 1)
+        self.assertIn("test-evidence", evidence_ids)
+
+    def test_profile_validation_rejects_malformed_duplicate_and_orphan_source_notes(self) -> None:
+        invalid_notes = (
+            "`test-evidence`: User-provided in conversation; imported 2026-14-20",
+            "`unknown-evidence`: User-provided in conversation; imported 2026-10-20",
+            "`test-evidence`: User-provided in conversation; imported 2026-10-20\n"
+            "`test-evidence`: Another source; imported 2026-10-20",
+        )
+        for source_notes in invalid_notes:
+            with self.subTest(source_notes=source_notes), tempfile.TemporaryDirectory() as temporary_directory:
+                profile_dir = Path(temporary_directory) / "profile"
+                write_profile(profile_dir)
+                path = profile_dir / "record.md"
+                path.write_text(
+                    path.read_text(encoding="utf-8")
+                    + "\n## Source notes\n"
+                    + source_notes
+                    + "\n",
+                    encoding="utf-8",
+                )
+                with self.assertRaises(resume_tools.WorkflowError):
+                    resume_tools.validate_profile(profile_dir)
+
+
+class ProfileUpdateTests(unittest.TestCase):
+    def write_operations(self, root: Path, contents: str) -> Path:
+        operations_path = root / "operations.json"
+        operations_path.write_text(
+            json.dumps(
+                {
+                    "writes": {"record.md": contents},
+                    "deletes": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        return operations_path
+
+    def updated_record(self, profile_dir: Path) -> str:
+        return (profile_dir / "record.md").read_text(encoding="utf-8") + (
+            "\n- [test-impact] Improved service reliability.\n"
+            "\n## Source notes\n"
+            "`test-impact`: User-provided in conversation; imported 2026-10-20; "
+            "locator: project details\n"
+        )
+
+    def test_stage_validates_candidate_and_does_not_modify_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            original = (profile_dir / "record.md").read_bytes()
+            operations = self.write_operations(root, self.updated_record(profile_dir))
+
+            stage_dir, changed, diff = resume_tools.stage_profile_update(profile_dir, operations)
+            try:
+                self.assertIn("record.md", changed)
+                self.assertIn("index.yaml", changed)
+                self.assertIn("+- [test-impact]", diff)
+                self.assertEqual((profile_dir / "record.md").read_bytes(), original)
+                self.assertTrue((stage_dir / "profile" / "index.yaml").exists())
+            finally:
+                resume_tools.discard_profile_update(stage_dir, profile_dir)
+
+    def test_stage_rejects_invalid_candidate_without_mutating_profile(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            record_path = profile_dir / "record.md"
+            original = record_path.read_bytes()
+            operations = self.write_operations(
+                root,
+                record_path.read_text(encoding="utf-8") + "\n- [test-evidence] Duplicate claim.\n",
+            )
+
+            with self.assertRaisesRegex(resume_tools.WorkflowError, "duplicate evidence id"):
+                resume_tools.stage_profile_update(profile_dir, operations)
+            self.assertEqual(record_path.read_bytes(), original)
+
+    def test_stage_rejects_paths_outside_profile_records(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            operations = root / "operations.json"
+            operations.write_text(
+                json.dumps({"writes": {"../resume.yaml": "unsafe"}, "deletes": []}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(resume_tools.WorkflowError, "Unsafe profile record path"):
+                resume_tools.stage_profile_update(profile_dir, operations)
+
+    def test_promotion_rejects_stale_profile_without_overwriting_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            operations = self.write_operations(root, self.updated_record(profile_dir))
+            stage_dir, _, _ = resume_tools.stage_profile_update(profile_dir, operations)
+            marker = profile_dir / "external-change.txt"
+            marker.write_text("concurrent change", encoding="utf-8")
+            try:
+                with self.assertRaisesRegex(resume_tools.WorkflowError, "changed after the preview"):
+                    resume_tools.promote_profile_update(stage_dir, profile_dir)
+                self.assertTrue(marker.exists())
+                self.assertNotIn(
+                    "test-impact",
+                    (profile_dir / "record.md").read_text(encoding="utf-8"),
+                )
+            finally:
+                resume_tools.discard_profile_update(stage_dir, profile_dir)
+
+    def test_promotion_rolls_back_record_when_index_replace_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            record_path = profile_dir / "record.md"
+            original_record = record_path.read_bytes()
+            operations = self.write_operations(root, self.updated_record(profile_dir))
+            stage_dir, _, _ = resume_tools.stage_profile_update(profile_dir, operations)
+            real_replace = os.replace
+            replace_calls = 0
+
+            def fail_index_replace(source: object, destination: object) -> None:
+                nonlocal replace_calls
+                replace_calls += 1
+                if replace_calls == 2:
+                    raise OSError("simulated index promotion failure")
+                real_replace(source, destination)
+
+            try:
+                with patch.object(resume_tools.os, "replace", side_effect=fail_index_replace):
+                    with self.assertRaisesRegex(resume_tools.WorkflowError, "Changes were rolled back"):
+                        resume_tools.promote_profile_update(stage_dir, profile_dir)
+                self.assertEqual(record_path.read_bytes(), original_record)
+                self.assertFalse((profile_dir / "index.yaml").exists())
+            finally:
+                resume_tools.discard_profile_update(stage_dir, profile_dir)
+
+    def test_successful_promotion_updates_records_and_index(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            operations = self.write_operations(root, self.updated_record(profile_dir))
+            stage_dir, _, _ = resume_tools.stage_profile_update(profile_dir, operations)
+
+            changed = resume_tools.promote_profile_update(stage_dir, profile_dir)
+            records, evidence_ids = resume_tools.validate_profile(profile_dir)
+            index = yaml.safe_load((profile_dir / "index.yaml").read_text(encoding="utf-8"))
+
+        self.assertIn("record.md", changed)
+        self.assertIn("index.yaml", changed)
+        self.assertIn("test-impact", evidence_ids)
+        self.assertEqual(index["records"], records)
 
 
 class ResumeValidationTests(unittest.TestCase):

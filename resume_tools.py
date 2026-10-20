@@ -1,12 +1,17 @@
 from __future__ import annotations
 
 import argparse
+import difflib
+import hashlib
 import json
+import os
 import re
 import shutil
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from pathlib import PurePosixPath
 from typing import Any
 
 import yaml
@@ -19,6 +24,11 @@ RECORD_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 EVIDENCE_LINE = re.compile(
     r"^\s*-\s+\[([a-z0-9]+(?:-[a-z0-9]+)*)\]\s+(.+?)\s*$",
     re.MULTILINE,
+)
+SOURCE_NOTE_LINE = re.compile(
+    r"^\s*`([a-z0-9]+(?:-[a-z0-9]+)*)`:\s+([^;\r\n]+);"
+    r"\s+imported (\d{4}-\d{2}-\d{2})"
+    r"(?:;\s+locator:\s+(.+))?\s*$"
 )
 MARKDOWN_BULLET = re.compile(r"^\s*-\s+")
 FIT_REPORT_HEADINGS = (
@@ -92,6 +102,60 @@ def parse_profile_record(path: Path) -> tuple[dict[str, Any], str]:
     return metadata, "\n".join(lines[closing_index + 1 :])
 
 
+def source_note_ids(path: Path, body: str, evidence_ids: set[str]) -> None:
+    lines = body.splitlines()
+    headings = [
+        index
+        for index, line in enumerate(lines)
+        if line.strip() == "## Source notes"
+    ]
+    if len(headings) > 1:
+        raise WorkflowError(f"{path}: duplicate '## Source notes' sections.")
+    if not headings:
+        return
+
+    start = headings[0] + 1
+    end = next(
+        (
+            index
+            for index in range(start, len(lines))
+            if re.match(r"^##\s+", lines[index])
+        ),
+        len(lines),
+    )
+    notes = [line for line in lines[start:end] if line.strip()]
+    if not notes:
+        raise WorkflowError(f"{path}: '## Source notes' section must contain at least one source note.")
+
+    seen: set[str] = set()
+    for line_index in range(start, end):
+        line = lines[line_index]
+        if not line.strip():
+            continue
+        match = SOURCE_NOTE_LINE.fullmatch(line)
+        if not match:
+            raise WorkflowError(
+                f"{path}: body line {line_index + 1}: malformed source note; expected "
+                "`evidence-id`: source label; imported YYYY-MM-DD; optional locator."
+            )
+        evidence_id, source_label, imported_date, locator = match.groups()
+        if evidence_id in seen:
+            raise WorkflowError(f"{path}: duplicate source note for evidence id '{evidence_id}'.")
+        if evidence_id not in evidence_ids:
+            raise WorkflowError(
+                f"{path}: source note references unknown evidence id '{evidence_id}'."
+            )
+        try:
+            datetime.strptime(imported_date, "%Y-%m-%d")
+        except ValueError as exc:
+            raise WorkflowError(
+                f"{path}: source note for '{evidence_id}' has invalid import date '{imported_date}'."
+            ) from exc
+        if not source_label.strip() or (locator is not None and not locator.strip()):
+            raise WorkflowError(f"{path}: source note fields must not be empty.")
+        seen.add(evidence_id)
+
+
 def profile_records(profile_dir: Path) -> list[tuple[Path, dict[str, Any], str]]:
     root = profile_dir.resolve()
     if not profile_dir.is_dir():
@@ -143,6 +207,7 @@ def validate_profile(profile_dir: Path) -> tuple[list[dict[str, Any]], set[str]]
             if not isinstance(values, list) or not all(isinstance(value, str) for value in values):
                 raise WorkflowError(f"{path}: frontmatter field '{field}' must be a list of strings.")
 
+        local_evidence_ids: set[str] = set()
         for line_number, line in enumerate(body.splitlines(), start=1):
             if MARKDOWN_BULLET.match(line) and not EVIDENCE_LINE.match(line):
                 raise WorkflowError(
@@ -156,6 +221,8 @@ def validate_profile(profile_dir: Path) -> tuple[list[dict[str, Any]], set[str]]
                     f"{seen_evidence_ids[evidence_id]}."
                 )
             seen_evidence_ids[evidence_id] = path
+            local_evidence_ids.add(evidence_id)
+        source_note_ids(path, body, local_evidence_ids)
 
         index_record: dict[str, Any] = {
             field: metadata[field] for field in REQUIRED_METADATA
@@ -179,13 +246,287 @@ def write_index(profile_dir: Path, output_path: Path | None) -> Path:
     records, _ = validate_profile(profile_dir)
     destination = output_path or profile_dir / "index.yaml"
     destination.parent.mkdir(parents=True, exist_ok=True)
-    content = yaml.safe_dump(
+    destination.write_text(profile_index_content(records), encoding="utf-8")
+    return destination
+
+
+def profile_index_content(records: list[dict[str, Any]]) -> str:
+    return yaml.safe_dump(
         {"version": 1, "records": records},
         sort_keys=False,
         allow_unicode=True,
     )
-    destination.write_text(content, encoding="utf-8")
-    return destination
+
+
+def profile_tree_snapshot(profile_dir: Path) -> dict[str, str]:
+    root = profile_dir.resolve()
+    if profile_dir.is_symlink() or not root.is_dir():
+        raise WorkflowError(f"Profile directory not found or unsafe: {profile_dir}")
+
+    snapshot: dict[str, str] = {}
+    for path in sorted(root.rglob("*")):
+        if path.is_symlink():
+            raise WorkflowError(f"Profile tree contains an unsafe symbolic link: {path}")
+        if path.is_dir():
+            continue
+        if not path.is_file():
+            raise WorkflowError(f"Profile tree contains a non-regular file: {path}")
+        relative = path.relative_to(root).as_posix()
+        snapshot[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return snapshot
+
+
+def checked_profile_record_path(root: Path, relative_path: str) -> Path:
+    relative = PurePosixPath(relative_path)
+    if (
+        not relative_path
+        or relative.is_absolute()
+        or "\\" in relative_path
+        or relative.as_posix() != relative_path
+        or any(part in {"", ".", ".."} for part in relative.parts)
+        or relative.suffix.lower() != ".md"
+        or relative.name.lower() == "readme.md"
+    ):
+        raise WorkflowError(f"Unsafe profile record path: {relative_path!r}")
+
+    candidate = root.joinpath(*relative.parts)
+    current = root
+    for part in relative.parts:
+        current = current / part
+        if current.is_symlink():
+            raise WorkflowError(f"Profile record path contains a symbolic link: {relative_path}")
+    if not candidate.resolve().is_relative_to(root.resolve()):
+        raise WorkflowError(f"Profile record path escapes the profile directory: {relative_path}")
+    return candidate
+
+
+def stage_profile_update(
+    profile_dir: Path,
+    operations_path: Path,
+) -> tuple[Path, list[str], str]:
+    if operations_path.is_symlink() or not operations_path.is_file():
+        raise WorkflowError(f"Update operations file not found or unsafe: {operations_path}")
+    try:
+        operations = json.loads(operations_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise WorkflowError(f"Invalid profile update operations JSON: {exc}") from exc
+    if (
+        not isinstance(operations, dict)
+        or set(operations) != {"writes", "deletes"}
+        or not isinstance(operations["writes"], dict)
+        or not isinstance(operations["deletes"], list)
+    ):
+        raise WorkflowError("Profile update operations must contain string writes and a string deletes list.")
+    if not operations["writes"] and not operations["deletes"]:
+        raise WorkflowError("Profile update contains no changes.")
+    if not all(
+        isinstance(path, str) and isinstance(content, str)
+        for path, content in operations["writes"].items()
+    ) or not all(isinstance(path, str) for path in operations["deletes"]):
+        raise WorkflowError("Profile update paths and file contents must be strings.")
+
+    write_paths = set(operations["writes"])
+    delete_paths = set(operations["deletes"])
+    if len(operations["deletes"]) != len(delete_paths) or write_paths & delete_paths:
+        raise WorkflowError("Profile update contains duplicate or conflicting paths.")
+
+    profile_root = profile_dir.resolve()
+    original_snapshot = profile_tree_snapshot(profile_dir)
+    stage_dir = Path(tempfile.mkdtemp(prefix="resume-profile-update-"))
+    candidate_dir = stage_dir / "profile"
+    try:
+        shutil.copytree(profile_root, candidate_dir)
+        for relative_path, content in operations["writes"].items():
+            destination = checked_profile_record_path(candidate_dir, relative_path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_text(content, encoding="utf-8")
+        for relative_path in operations["deletes"]:
+            destination = checked_profile_record_path(candidate_dir, relative_path)
+            if not destination.is_file():
+                raise WorkflowError(f"Cannot delete missing profile record: {relative_path}")
+            destination.unlink()
+
+        records, _ = validate_profile(candidate_dir)
+        write_index(candidate_dir, None)
+        candidate_snapshot = profile_tree_snapshot(candidate_dir)
+        manifest = {
+            "version": 1,
+            "profile_root": str(profile_root),
+            "original_snapshot": original_snapshot,
+            "candidate_snapshot": candidate_snapshot,
+        }
+        (stage_dir / "manifest.json").write_text(
+            json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+        changed = sorted(
+            path
+            for path in set(original_snapshot) | set(candidate_snapshot)
+            if original_snapshot.get(path) != candidate_snapshot.get(path)
+        )
+        if not changed:
+            raise WorkflowError("Profile update contains no changes.")
+        diff_parts: list[str] = []
+        for relative_path in changed:
+            if not relative_path.endswith(".md") and relative_path != "index.yaml":
+                continue
+            old_path = profile_root / relative_path
+            new_path = candidate_dir / relative_path
+            old_lines = old_path.read_text(encoding="utf-8").splitlines(keepends=True) if old_path.exists() else []
+            new_lines = new_path.read_text(encoding="utf-8").splitlines(keepends=True) if new_path.exists() else []
+            diff_parts.extend(
+                difflib.unified_diff(
+                    old_lines,
+                    new_lines,
+                    fromfile=f"a/profile/{relative_path}",
+                    tofile=f"b/profile/{relative_path}",
+                )
+            )
+        return stage_dir, changed, "".join(diff_parts)
+    except (OSError, WorkflowError, yaml.YAMLError):
+        shutil.rmtree(stage_dir, ignore_errors=True)
+        raise
+
+
+def read_profile_update_stage(stage_dir: Path, profile_dir: Path) -> tuple[Path, dict[str, Any]]:
+    resolved_stage = stage_dir.resolve()
+    temporary_root = Path(tempfile.gettempdir()).resolve()
+    if (
+        resolved_stage.parent != temporary_root
+        or not resolved_stage.name.startswith("resume-profile-update-")
+        or stage_dir.is_symlink()
+    ):
+        raise WorkflowError(f"Unsafe profile update staging directory: {stage_dir}")
+    manifest_path = resolved_stage / "manifest.json"
+    candidate_dir = resolved_stage / "profile"
+    if manifest_path.is_symlink() or candidate_dir.is_symlink():
+        raise WorkflowError(f"Profile update staging directory contains a symbolic link: {resolved_stage}")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise WorkflowError(f"Invalid profile update staging manifest: {exc}") from exc
+    if (
+        not isinstance(manifest, dict)
+        or manifest.get("version") != 1
+        or manifest.get("profile_root") != str(profile_dir.resolve())
+        or not isinstance(manifest.get("original_snapshot"), dict)
+        or not isinstance(manifest.get("candidate_snapshot"), dict)
+        or not candidate_dir.is_dir()
+    ):
+        raise WorkflowError(f"Profile update staging manifest does not match {profile_dir}.")
+    return candidate_dir, manifest
+
+
+def promote_profile_update(stage_dir: Path, profile_dir: Path) -> list[str]:
+    candidate_dir, manifest = read_profile_update_stage(stage_dir, profile_dir)
+    current_snapshot = profile_tree_snapshot(profile_dir)
+    if current_snapshot != manifest["original_snapshot"]:
+        raise WorkflowError(
+            "Profile changed after the preview. Rebuild and validate the candidate, then request approval again."
+        )
+    candidate_snapshot = profile_tree_snapshot(candidate_dir)
+    if candidate_snapshot != manifest["candidate_snapshot"]:
+        raise WorkflowError("Staged profile candidate changed after validation; rebuild the preview.")
+    records, _ = validate_profile(candidate_dir)
+    candidate_index = candidate_dir / "index.yaml"
+    if (
+        candidate_index.is_symlink()
+        or not candidate_index.is_file()
+        or candidate_index.read_text(encoding="utf-8") != profile_index_content(records)
+    ):
+        raise WorkflowError("Staged profile candidate index is missing or inconsistent.")
+
+    changed = sorted(
+        path
+        for path in set(current_snapshot) | set(candidate_snapshot)
+        if current_snapshot.get(path) != candidate_snapshot.get(path)
+    )
+    if not changed:
+        raise WorkflowError("Staged profile update has no changes to promote.")
+    write_order = [path for path in changed if path != "index.yaml"]
+    if "index.yaml" in changed:
+        write_order.append("index.yaml")
+
+    backup_dir = Path(tempfile.mkdtemp(prefix="resume-profile-backup-"))
+    applied: list[str] = []
+    root = profile_dir.resolve()
+    try:
+        for relative_path in changed:
+            if relative_path in current_snapshot:
+                backup = backup_dir / relative_path
+                backup.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(root / relative_path, backup)
+
+        if profile_tree_snapshot(profile_dir) != manifest["original_snapshot"]:
+            raise WorkflowError(
+                "Profile changed during promotion preparation. Rebuild the candidate and request approval again."
+            )
+
+        def replace_from(source: Path, destination: Path, prefix: str) -> None:
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=prefix,
+                dir=destination.parent,
+            )
+            os.close(descriptor)
+            temporary_file = Path(temporary_name)
+            try:
+                shutil.copy2(source, temporary_file)
+                os.replace(temporary_file, destination)
+            finally:
+                if temporary_file.exists():
+                    temporary_file.unlink()
+
+        for relative_path in write_order:
+            destination = root / relative_path
+            staged_source = candidate_dir / relative_path
+            if relative_path not in candidate_snapshot:
+                destination.unlink()
+            else:
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                replace_from(
+                    staged_source,
+                    destination,
+                    f".{destination.name}.profile-update-",
+                )
+            applied.append(relative_path)
+    except (OSError, WorkflowError) as exc:
+        rollback_errors: list[str] = []
+        for relative_path in reversed(applied):
+            destination = root / relative_path
+            try:
+                backup = backup_dir / relative_path
+                if relative_path in current_snapshot:
+                    replace_from(
+                        backup,
+                        destination,
+                        f".{destination.name}.profile-rollback-",
+                    )
+                elif destination.exists():
+                    destination.unlink()
+            except OSError as rollback_exc:
+                rollback_errors.append(f"{relative_path}: {rollback_exc}")
+        details = f"Profile promotion failed: {exc}. "
+        if rollback_errors:
+            details += "Rollback failures: " + "; ".join(rollback_errors)
+        else:
+            details += "Changes were rolled back."
+        raise WorkflowError(details) from exc
+    finally:
+        shutil.rmtree(backup_dir, ignore_errors=True)
+
+    try:
+        shutil.rmtree(stage_dir)
+    except OSError as exc:
+        raise WorkflowError(
+            f"Profile update was promoted, but staging cleanup failed at {stage_dir}: {exc}"
+        ) from exc
+    return changed
+
+
+def discard_profile_update(stage_dir: Path, profile_dir: Path) -> None:
+    read_profile_update_stage(stage_dir, profile_dir)
+    shutil.rmtree(stage_dir)
 
 
 def collect_string_paths(value: Any, prefix: str = "") -> set[str]:
@@ -552,6 +893,27 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser = subparsers.add_parser("validate-profile", help="Validate profile records and IDs.")
     validate_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
 
+    stage_parser = subparsers.add_parser(
+        "stage-profile-update",
+        help="Validate a profile update candidate without modifying the canonical profile.",
+    )
+    stage_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    stage_parser.add_argument("--operations", required=True, type=Path)
+
+    promote_parser = subparsers.add_parser(
+        "promote-profile-update",
+        help="Promote a validated profile update after explicit user approval.",
+    )
+    promote_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    promote_parser.add_argument("--stage-dir", required=True, type=Path)
+
+    discard_parser = subparsers.add_parser(
+        "discard-profile-update",
+        help="Discard a staged profile update that the user did not approve.",
+    )
+    discard_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    discard_parser.add_argument("--stage-dir", required=True, type=Path)
+
     draft_parser = subparsers.add_parser("create-draft", help="Create an isolated application draft directory.")
     draft_parser.add_argument("--application", required=True, help="Application slug or descriptive label.")
     draft_parser.add_argument("--output-root", type=Path, default=Path("generated"))
@@ -578,6 +940,25 @@ def main() -> None:
         elif args.command == "validate-profile":
             records, evidence_ids = validate_profile(args.profile_dir)
             print(f"Validated {len(records)} records and {len(evidence_ids)} record/evidence IDs.")
+        elif args.command == "stage-profile-update":
+            stage_dir, changed, diff = stage_profile_update(args.profile_dir, args.operations)
+            print(
+                json.dumps(
+                    {
+                        "state": "validated",
+                        "stage_dir": str(stage_dir),
+                        "changed_paths": changed,
+                        "diff": diff,
+                    },
+                    indent=2,
+                )
+            )
+        elif args.command == "promote-profile-update":
+            changed = promote_profile_update(args.stage_dir, args.profile_dir)
+            print(json.dumps({"state": "promoted", "changed_paths": changed}, indent=2))
+        elif args.command == "discard-profile-update":
+            discard_profile_update(args.stage_dir, args.profile_dir)
+            print(f"Discarded profile update stage: {args.stage_dir}")
         elif args.command == "create-draft":
             destination = create_draft(args.application, args.output_root, args.collision)
             print(destination)
