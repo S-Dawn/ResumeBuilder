@@ -37,6 +37,14 @@ poetry run python ResumeBuilder.py --config path/to/myresume.yaml --output-dir o
 poetry run python ResumeBuilder.py --strict-one-page
 ```
 
+## Analyze profile fit with GitHub Copilot
+
+Use the **Analyze Profile Fit** skill with a pasted job description or a path to a job-description file to assess a role before deciding whether to apply. It compares relevant job qualifications with evidence in the canonical profile and reports supported, partially supported, and undocumented requirements with profile evidence IDs.
+
+The report includes a qualitative assessment and a transparent weighted evidence-coverage score: supported qualifications receive full credit, partial matches half credit, unsupported qualifications no credit, and explicitly required qualifications count twice as much as preferred or other requirements. The score describes only what the profile documents; it is not a hiring or ATS prediction. The analysis distinguishes information to verify in the profile, positioning ideas based on existing evidence, and conditional skill-development areas.
+
+This diagnostic does not create a resume, application draft, profile update, or retained report. For file-based job descriptions, the skill discloses that relevant job-description and profile contents are sent as context to the configured Copilot model and asks for confirmation before reading the file. The full job description is not retained. Profile silence is not treated as proof that the user lacks a qualification.
+
 ## Tailor a resume with GitHub Copilot
 
 Use the **Tailor Resume** skill in GitHub Copilot in VS Code and provide either a pasted job description or a path to a job-description file. The skill:
