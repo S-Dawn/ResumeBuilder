@@ -568,9 +568,12 @@ class DraftTests(unittest.TestCase):
             )
             html_content = (draft_dir / "resume.html").read_text(encoding="utf-8")
             status = json.loads((draft_dir / "status.json").read_text(encoding="utf-8"))
+            extracted_word_count = resume_tools.count_pdf_words(draft_dir / "resume.pdf")
 
         self.assertEqual(pages, 1)
         self.assertEqual(status["state"], "validated")
+        self.assertEqual(status["word_count"], extracted_word_count)
+        self.assertGreater(status["word_count"], 0)
         self.assertNotIn("<h2>Technical Skills</h2>", html_content)
         self.assertNotIn("<h2>Projects</h2>", html_content)
         self.assertNotIn("<ul>\n            \n        </ul>", html_content)
@@ -621,6 +624,7 @@ class DraftTests(unittest.TestCase):
             self.assertEqual(status["state"], "failed")
             self.assertEqual(status["render_attempts"], resume_tools.MAX_RENDER_ATTEMPTS)
             self.assertEqual(status["page_count"], 2)
+            self.assertEqual(status["word_count"], 0)
             self.assertTrue((draft_dir / "resume.yaml").exists())
             self.assertTrue((draft_dir / "resume.pdf").exists())
 

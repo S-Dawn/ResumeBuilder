@@ -115,18 +115,18 @@ Tailored output SHALL use a text-based single-column layout with conventional se
 - **THEN** the renderer omits its heading and wrapper while preserving the order of sections that do contain content
 
 ### Requirement: Prioritize strong role-fit evidence and use page space effectively
-For each tailored draft, the workflow SHALL select the strongest supported experience, project, and achievement evidence that complements both the candidate's background and the target role. It SHALL map major job requirements to evidence, favor concrete outcomes and meaningful contributions over redundant keyword lists, and use relevant evidence to avoid substantial unused space on an otherwise readable one-page resume. It SHALL NOT add filler, duplicate claims, or unsupported facts to increase length. Page utilization SHALL NOT come at the expense of readability, factual traceability, or the one-page limit.
+For each tailored draft, the workflow SHALL select the strongest supported experience, project, and achievement evidence that complements both the candidate's background and the target role. It SHALL map major job requirements to evidence, favor concrete outcomes and meaningful contributions over redundant keyword lists, and use relevant evidence to approach a soft target of 900 words in the rendered resume. The word count SHALL be measured from extractable text in the rendered PDF and exposed in `status.json`; the workflow SHALL use this measure instead of screenshots or visual page inspection to assess content fullness. It SHALL NOT add filler, duplicate claims, or unsupported facts to increase length. Word-count targeting SHALL NOT come at the expense of readability, factual traceability, or the one-page limit.
 
-#### Scenario: Enrich a sparse one-page draft
-- **WHEN** a rendered draft fits on one page but leaves substantial usable space and relevant supported evidence was omitted
-- **THEN** the workflow considers omitted evidence in relevance tiers, adds the strongest item that materially improves the role fit without harming page fit or readability, updates its source mappings, and re-renders
+#### Scenario: Enrich a draft below the word target
+- **WHEN** a rendered draft is below the 900-word target and relevant supported evidence was omitted
+- **THEN** the workflow considers omitted evidence in relevance tiers, adds the strongest item that materially improves role fit without harming one-page fit or readability, updates its source mappings, and re-renders
 
 #### Scenario: No relevant evidence remains
-- **WHEN** a one-page draft has substantial unused space but no additional relevant, supported evidence
+- **WHEN** a one-page draft is below the word target but no additional relevant, supported evidence remains
 - **THEN** the workflow does not add filler or weaken the role fit merely to occupy space
 
 #### Scenario: Progress from direct to moderate-fit evidence
-- **WHEN** the strongest direct evidence has been included and the one-page draft has room for further content
+- **WHEN** the strongest direct evidence has been included and the draft remains below the word target
 - **THEN** the workflow reviews moderately related evidence with impactful contributions or concrete outcomes, followed by other complementary evidence, adding only non-redundant items that strengthen the application
 
 ### Requirement: Verify strict one-page output with bounded retries
@@ -140,8 +140,8 @@ The tailoring workflow SHALL verify the actual rendered PDF contains exactly one
 - **WHEN** the initial PDF exceeds one page but a content-trimming retry fits
 - **THEN** the workflow re-renders, checks the actual PDF, and reports success only after exactly-one-page validation
 
-#### Scenario: Improve page utilization across relevance tiers
-- **WHEN** a draft fits on one page but substantial usable space remains and stronger relevant evidence is available
+#### Scenario: Approach the word target across relevance tiers
+- **WHEN** a draft is below the word target and stronger relevant evidence is available
 - **THEN** the workflow uses successive revisions to consider direct, moderately related but impactful, and other complementary evidence in order, stopping when the page is well balanced, further additions would harm readability or exceed one page, no worthwhile evidence remains, or eight total render attempts have been reached
 
 #### Scenario: Protected content prevents one-page fit

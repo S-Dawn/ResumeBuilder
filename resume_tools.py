@@ -15,6 +15,7 @@ from pathlib import PurePosixPath
 from typing import Any
 
 import yaml
+from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 from weasyprint import HTML
 
@@ -920,6 +921,12 @@ def write_status(draft_dir: Path, status: dict[str, Any]) -> None:
     temporary_path.replace(status_path)
 
 
+def count_pdf_words(pdf_path: Path) -> int:
+    reader = PdfReader(str(pdf_path))
+    extracted_text = " ".join(page.extract_text() or "" for page in reader.pages)
+    return len(re.findall(r"\b[\w]+(?:['’\-][\w]+)*\b", extracted_text))
+
+
 def render_draft(
     draft_dir: Path,
     profile_dir: Path,
@@ -949,6 +956,7 @@ def render_draft(
     status.update({"state": "failed", "render_attempts": attempt})
     status.pop("error", None)
     status.pop("page_count", None)
+    status.pop("word_count", None)
     write_status(draft_dir, status)
 
     try:
@@ -968,6 +976,8 @@ def render_draft(
         html_path.write_text(html_content, encoding="utf-8")
         HTML(str(html_path)).write_pdf(str(pdf_path))
 
+        status["word_count"] = count_pdf_words(pdf_path)
+        write_status(draft_dir, status)
         page_count = validate_pdf_output(pdf_path, resume, html_content)
         if page_count != 1:
             raise PageFitError(page_count)
@@ -1069,7 +1079,11 @@ def main() -> None:
                 args.attempt,
                 args.generated_root,
             )
-            print(f"Validated one-page draft: {args.draft_dir} ({page_count} page)")
+            word_count = read_status(args.draft_dir)["word_count"]
+            print(
+                f"Validated one-page draft: {args.draft_dir} "
+                f"({page_count} page, {word_count} words)"
+            )
     except (WorkflowError, OSError, yaml.YAMLError, PdfReadError) as exc:
         print(f"resume-tools: error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc

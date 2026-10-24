@@ -52,7 +52,7 @@ Use the **Tailor Resume** skill in GitHub Copilot in VS Code and provide either 
 1. Rebuilds and reads `profile/index.yaml`, then fetches relevant profile records as needed.
 2. Produces a tailored `resume.yaml`, `source-map.json`, and `fit-report.md`.
 3. Creates an isolated application draft under `generated/`, renders it, and checks the actual PDF.
-4. Allows three content-trimming retries after the initial render if the PDF exceeds one page.
+4. Uses the extracted PDF word count to guide content revisions toward a soft 900-word target without screenshots; strict one-page validation and readability remain authoritative.
 5. Presents the draft for human review; it does not submit applications.
 
 The skill may substantially rewrite claims, but it must not invent or alter factual claims. It flags conflicting source evidence and identifies unsupported job requirements instead of inventing qualifications. ATS-oriented checks cover text extraction, conventional headings/order, single-column layout, and one-page fit; they do not guarantee compatibility with every ATS vendor.
