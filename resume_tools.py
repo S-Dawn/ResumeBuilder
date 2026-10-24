@@ -45,6 +45,10 @@ FIT_GAP = re.compile(
     re.IGNORECASE,
 )
 FIT_EVIDENCE_ID = re.compile(r"`([a-z0-9]+(?:-[a-z0-9]+)*)`")
+MASTER_CONFLICT_ENTRY = re.compile(
+    r"^\s*-\s+Conflicting claims — evidence:\s+"
+    r"((?:`[a-z0-9]+(?:-[a-z0-9]+)*`(?:,\s*)?)+)\s*$"
+)
 REQUIRED_METADATA = ("id", "type", "title", "summary")
 MAX_RENDER_ATTEMPTS = 8
 OPTIONAL_METADATA = (
@@ -734,7 +738,7 @@ def validate_resume_data(resume: Any) -> dict[str, Any]:
     return resume
 
 
-def validate_source_map(resume: dict[str, Any], source_map_path: Path, profile_dir: Path) -> None:
+def validate_source_map(resume: dict[str, Any], source_map_path: Path, profile_dir: Path) -> set[str]:
     try:
         source_map = json.loads(source_map_path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
@@ -779,6 +783,19 @@ def validate_source_map(resume: dict[str, Any], source_map_path: Path, profile_d
         if stale:
             details.append(f"paths not present in resume: {', '.join(stale)}")
         raise WorkflowError(f"{source_map_path}: " + "; ".join(details) + ".")
+    return {
+        evidence_id
+        for item in source_map["items"]
+        for evidence_id in item["source_evidence_ids"]
+    }
+
+
+def profile_evidence_ids(profile_dir: Path) -> set[str]:
+    return {
+        match.group(1)
+        for _, _, body in profile_records(profile_dir)
+        for match in EVIDENCE_LINE.finditer(body)
+    }
 
 
 def validate_fit_report(fit_report_path: Path, profile_dir: Path) -> None:
@@ -840,6 +857,57 @@ def validate_fit_report(fit_report_path: Path, profile_dir: Path) -> None:
             )
 
 
+def validate_master_report(
+    report_path: Path,
+    profile_dir: Path,
+    omitted_evidence_ids: set[str],
+) -> None:
+    try:
+        report = report_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise WorkflowError(f"Cannot read master report {report_path}: {exc}") from exc
+
+    heading = "## Conflicting evidence excluded"
+    heading_position = report.find(heading)
+    if not report.startswith("# Master resume report") or heading_position < 0:
+        raise WorkflowError(
+            f"{report_path}: expected '# Master resume report' and "
+            "'## Conflicting evidence excluded' headings."
+        )
+
+    entries = [
+        line
+        for line in report[heading_position + len(heading) :].splitlines()
+        if line.lstrip().startswith("- ")
+    ]
+    if not entries:
+        raise WorkflowError(f"{report_path}: list conflicting evidence or 'None identified'.")
+    if len(entries) == 1 and entries[0].strip().casefold() == "- none identified":
+        reported_ids: set[str] = set()
+    else:
+        reported_ids = set()
+        for line in entries:
+            match = MASTER_CONFLICT_ENTRY.fullmatch(line)
+            if not match:
+                raise WorkflowError(
+                    f"{report_path}: conflicting evidence must use "
+                    "'- Conflicting claims — evidence: `evidence-id`'."
+                )
+            reported_ids.update(FIT_EVIDENCE_ID.findall(match.group(1)))
+
+    _, known_ids = validate_profile(profile_dir)
+    unknown_ids = reported_ids - known_ids
+    if unknown_ids:
+        raise WorkflowError(
+            f"{report_path}: unknown evidence ID(s): {', '.join(sorted(unknown_ids))}."
+        )
+    if reported_ids != omitted_evidence_ids:
+        raise WorkflowError(
+            f"{report_path}: conflicting evidence IDs must match omitted profile evidence; "
+            f"expected {', '.join(sorted(omitted_evidence_ids)) or 'None identified'}."
+        )
+
+
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
     if not slug or not RECORD_ID.fullmatch(slug):
@@ -855,7 +923,14 @@ def prompt_collision() -> str:
     return {"n": "new", "r": "replace", "c": "cancel", "": "cancel"}.get(choice, "cancel")
 
 
-def create_draft(application: str, output_root: Path, collision: str) -> Path:
+def create_draft(
+    application: str,
+    output_root: Path,
+    collision: str,
+    draft_type: str = "tailored",
+) -> Path:
+    if draft_type not in {"tailored", "master"}:
+        raise WorkflowError(f"Unsupported draft type: {draft_type}")
     root = output_root.resolve()
     root.mkdir(parents=True, exist_ok=True)
     slug = slugify(application)
@@ -891,6 +966,7 @@ def create_draft(application: str, output_root: Path, collision: str) -> Path:
         {
             "state": "draft",
             "application": application,
+            "draft_type": draft_type,
             "render_attempts": 0,
             "created_at": datetime.now(timezone.utc).isoformat(),
         },
@@ -962,13 +1038,26 @@ def render_draft(
     try:
         resume_path = draft_dir / "resume.yaml"
         source_map_path = draft_dir / "source-map.json"
+        draft_type = status.get("draft_type", "tailored")
+        if draft_type not in {"tailored", "master"}:
+            raise WorkflowError(f"Unsupported draft type in status: {draft_type}")
         fit_report_path = draft_dir / "fit-report.md"
-        for required_file in (resume_path, source_map_path, fit_report_path):
+        master_report_path = draft_dir / "master-report.md"
+        required_files = [resume_path, source_map_path]
+        if draft_type == "tailored":
+            required_files.append(fit_report_path)
+        else:
+            required_files.append(master_report_path)
+        for required_file in required_files:
             if not required_file.is_file() or required_file.is_symlink():
                 raise WorkflowError(f"Required application artifact not found or unsafe: {required_file}")
         resume = validate_resume_data(load_resume_data(resume_path))
-        validate_source_map(resume, source_map_path, profile_dir)
-        validate_fit_report(fit_report_path, profile_dir)
+        mapped_evidence_ids = validate_source_map(resume, source_map_path, profile_dir)
+        if draft_type == "master":
+            missing_evidence = profile_evidence_ids(profile_dir) - mapped_evidence_ids
+            validate_master_report(master_report_path, profile_dir, missing_evidence)
+        else:
+            validate_fit_report(fit_report_path, profile_dir)
 
         html_content = build_html(resume)
         html_path = draft_dir / "resume.html"
@@ -978,13 +1067,24 @@ def render_draft(
 
         status["word_count"] = count_pdf_words(pdf_path)
         write_status(draft_dir, status)
-        page_count = validate_pdf_output(pdf_path, resume, html_content)
-        if page_count != 1:
+        page_count = len(PdfReader(str(pdf_path)).pages)
+        if draft_type == "tailored" and page_count != 1:
             raise PageFitError(page_count)
+        if draft_type == "master":
+            page_count = validate_pdf_output(
+                pdf_path,
+                resume,
+                html_content,
+                allow_multiple_pages=True,
+            )
+            status.update({"state": "validated", "page_count": page_count})
+            write_status(draft_dir, status)
+            return page_count
+        page_count = validate_pdf_output(pdf_path, resume, html_content)
         status.update({"state": "validated", "page_count": page_count})
         write_status(draft_dir, status)
         return page_count
-    except (WorkflowError, OSError, yaml.YAMLError, PdfReadError) as exc:
+    except (OSError, ValueError, yaml.YAMLError, PdfReadError) as exc:
         status.update({"state": "failed", "error": str(exc)})
         if isinstance(exc, PageFitError):
             status["page_count"] = exc.page_count
@@ -1028,6 +1128,12 @@ def build_parser() -> argparse.ArgumentParser:
     draft_parser.add_argument("--application", required=True, help="Application slug or descriptive label.")
     draft_parser.add_argument("--output-root", type=Path, default=Path("generated"))
     draft_parser.add_argument(
+        "--type",
+        choices=("tailored", "master"),
+        default="tailored",
+        help="Draft type; master resumes include all profile evidence and allow multiple pages.",
+    )
+    draft_parser.add_argument(
         "--collision",
         choices=("ask", "new", "replace", "cancel"),
         default="ask",
@@ -1070,7 +1176,12 @@ def main() -> None:
             discard_profile_update(args.stage_dir, args.profile_dir)
             print(f"Discarded profile update stage: {args.stage_dir}")
         elif args.command == "create-draft":
-            destination = create_draft(args.application, args.output_root, args.collision)
+            destination = create_draft(
+                args.application,
+                args.output_root,
+                args.collision,
+                args.type,
+            )
             print(destination)
         elif args.command == "render":
             page_count = render_draft(
@@ -1081,10 +1192,10 @@ def main() -> None:
             )
             word_count = read_status(args.draft_dir)["word_count"]
             print(
-                f"Validated one-page draft: {args.draft_dir} "
-                f"({page_count} page, {word_count} words)"
+                f"Validated {page_count}-page {read_status(args.draft_dir).get('draft_type', 'tailored')} draft: "
+                f"{args.draft_dir} ({word_count} words)"
             )
-    except (WorkflowError, OSError, yaml.YAMLError, PdfReadError) as exc:
+    except (OSError, ValueError, yaml.YAMLError, PdfReadError) as exc:
         print(f"resume-tools: error: {exc}", file=sys.stderr)
         raise SystemExit(1) from exc
 

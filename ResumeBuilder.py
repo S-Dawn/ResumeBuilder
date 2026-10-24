@@ -314,7 +314,12 @@ def build_html(resume: dict) -> str:
 """
 
 
-def validate_pdf_output(pdf_path: Path, resume: dict, html_content: str) -> int:
+def validate_pdf_output(
+    pdf_path: Path,
+    resume: dict,
+    html_content: str,
+    allow_multiple_pages: bool = False,
+) -> int:
     lowered_html = html_content.lower()
     if (
         "<table" in lowered_html
@@ -325,23 +330,29 @@ def validate_pdf_output(pdf_path: Path, resume: dict, html_content: str) -> int:
 
     reader = PdfReader(str(pdf_path))
     page_count = len(reader.pages)
-    if page_count != 1:
+    if page_count != 1 and not allow_multiple_pages:
         return page_count
 
-    text_fragments: list[tuple[str, float, float]] = []
+    text_fragments: list[tuple[int, str, float, float]] = []
 
-    def collect_text_position(
-        text: str,
-        _current_matrix: list[float],
-        text_matrix: list[float],
-        _font_dictionary: dict | None,
-        _font_size: float,
-    ) -> None:
-        if text.strip():
-            text_fragments.append((text, float(text_matrix[4]), float(text_matrix[5])))
+    def collect_text_position(page_number: int):
+        def collect(
+            text: str,
+            _current_matrix: list[float],
+            text_matrix: list[float],
+            _font_dictionary: dict | None,
+            _font_size: float,
+        ) -> None:
+            if text.strip():
+                text_fragments.append(
+                    (page_number, text, float(text_matrix[4]), float(text_matrix[5]))
+                )
+
+        return collect
 
     extracted_text = "\n".join(
-        page.extract_text(visitor_text=collect_text_position) or "" for page in reader.pages
+        page.extract_text(visitor_text=collect_text_position(page_number)) or ""
+        for page_number, page in enumerate(reader.pages)
     )
     if not extracted_text.strip():
         raise ValueError("Generated PDF contains no extractable text.")
@@ -373,20 +384,21 @@ def validate_pdf_output(pdf_path: Path, resume: dict, html_content: str) -> int:
         body_start = next(
             (
                 y
-                for text, _x, y in text_fragments
-                if first_heading in text.casefold()
+                for page_number, text, _x, y in text_fragments
+                if page_number == 0 and first_heading in text.casefold()
             ),
             None,
         )
         if body_start is None:
             raise ValueError("Could not locate the first section heading in the PDF text layout.")
 
-        page_width = float(reader.pages[0].mediabox.width)
-        rows: dict[int, set[str]] = {}
-        for text, x, y in text_fragments:
-            if y < body_start:
+        page_widths = [float(page.mediabox.width) for page in reader.pages]
+        rows: dict[tuple[int, int], set[str]] = {}
+        for page_number, _text, x, y in text_fragments:
+            if page_number == 0 and y < body_start:
                 continue
-            row_key = round(y / 2)
+            page_width = page_widths[page_number]
+            row_key = (page_number, round(y / 2))
             columns = rows.setdefault(row_key, set())
             if x < page_width * 0.45:
                 columns.add("left")

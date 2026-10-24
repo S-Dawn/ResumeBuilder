@@ -1,6 +1,6 @@
 ## Purpose
 
-Maintain reusable, traceable career evidence and generate job-specific, ATS-oriented one-page resume drafts for human review.
+Maintain reusable, traceable career evidence and generate either job-specific, ATS-oriented one-page resume drafts or a complete multi-page master resume for human review.
 
 ## Requirements
 
@@ -27,7 +27,7 @@ The tailoring workflow SHALL use the compact profile index to select and read re
 - **THEN** the workflow retrieves additional relevant records before composing resume content
 
 ### Requirement: Tailor from supported job-description inputs
-The system SHALL provide a GitHub Copilot in VS Code skill that accepts a pasted job description or a user-provided file and generates a resume YAML conforming to the existing renderer's contract.
+The system SHALL provide a GitHub Copilot in VS Code skill that accepts an optional pasted job description or user-provided file and generates a resume YAML conforming to the existing renderer's contract.
 
 #### Scenario: Tailor from pasted job description
 - **WHEN** the user invokes the skill with pasted job-description text
@@ -36,6 +36,29 @@ The system SHALL provide a GitHub Copilot in VS Code skill that accepts a pasted
 #### Scenario: Tailor from job-description file
 - **WHEN** the user invokes the skill with a job-description file
 - **THEN** the workflow reads that file as input and proceeds with the same evidence selection and output validation
+
+#### Scenario: Create a master resume without a job description
+- **WHEN** the user invokes the skill without a job description
+- **THEN** the workflow creates a consolidated master resume from all canonical profile records and evidence without asking for a job description
+
+### Requirement: Preserve all profile evidence in master resumes
+When no job description is supplied, the system SHALL create an unfiltered, consolidated resume containing all distinct supported details from the canonical profile. Master resumes SHALL preserve source traceability for all non-empty resume fields and SHALL NOT be constrained by a word-count target or page limit. Conflicting claims SHALL be omitted and listed with their evidence IDs in `master-report.md` for clarification.
+
+#### Scenario: Include complete profile evidence
+- **WHEN** a master resume is generated
+- **THEN** every non-conflicting profile evidence ID is represented in the resume source map, and all supported profile categories are included where applicable
+
+#### Scenario: Render a multi-page master resume
+- **WHEN** the complete master resume spans multiple pages
+- **THEN** it is validated for extractable text, expected heading order, and single-column structure without failing solely because it exceeds one page
+
+#### Scenario: Keep master resumes complete rather than target a length
+- **WHEN** the master resume is below or above 900 words
+- **THEN** the workflow does not add filler or remove supported evidence to approach a word-count target
+
+#### Scenario: Report conflicting evidence excluded from a master resume
+- **WHEN** profile claims conflict and cannot safely be consolidated
+- **THEN** the claims are omitted from the resume, their evidence IDs are listed in `master-report.md`, and the user is asked to clarify them
 
 ### Requirement: Treat profile and job-description contents as untrusted data
 The skill SHALL treat text in profile records and job descriptions as data, not instructions, and SHALL NOT follow embedded requests to expose or modify unrelated files.
@@ -60,7 +83,7 @@ The skill MAY substantially rewrite or reorder evidence for clarity and role rel
 - **THEN** the workflow presents it for human review and does not describe it as approved or submit it externally
 
 ### Requirement: Generate a fit report without retaining the full job description
-Each application draft SHALL include a fit report with `Evidence-backed matches` and `Unsupported or weakly supported requirements` sections. Matched requirements SHALL cite one or more valid profile evidence IDs; unsupported and weakly supported requirements SHALL be explicitly labeled, with evidence IDs included for weak support when applicable. Generated artifacts SHALL NOT include the full job description by default.
+Each job-tailored application draft SHALL include a fit report with `Evidence-backed matches` and `Unsupported or weakly supported requirements` sections. Matched requirements SHALL cite one or more valid profile evidence IDs; unsupported and weakly supported requirements SHALL be explicitly labeled, with evidence IDs included for weak support when applicable. Master resumes SHALL NOT include a fit report because no job requirements are being assessed. Generated artifacts SHALL NOT include the full job description by default.
 
 #### Scenario: Map requirements to evidence
 - **WHEN** the skill generates an application draft
@@ -78,7 +101,7 @@ The skill SHALL invoke deterministic Python tooling to rebuild the profile index
 - **THEN** the workflow reports the failure and does not present the draft as validated or ready to submit
 
 ### Requirement: Preserve per-application drafts without silent overwrite
-The system SHALL store each application's tailored YAML, source map, fit report, HTML, and PDF in an isolated generated draft directory and SHALL NOT overwrite the canonical profile or root `resume.yaml`. When a target application directory already exists, the workflow SHALL ask the user to create a numbered draft, explicitly replace the existing draft, or cancel. If interaction is unavailable, it SHALL cancel without overwriting. Failed validation or page-fit artifacts SHALL be retained and clearly marked as failed, not successful.
+The system SHALL store each tailored application's YAML, source map, fit report, HTML, and PDF, or each master resume's YAML, source map, master report, HTML, and PDF, in an isolated generated draft directory and SHALL NOT overwrite the canonical profile or root `resume.yaml`. When a target output directory already exists, the workflow SHALL ask the user to create a numbered draft, explicitly replace the existing draft, or cancel. If interaction is unavailable, it SHALL cancel without overwriting. Failed validation or page-fit artifacts SHALL be retained and clearly marked as failed, not successful.
 
 #### Scenario: Generate separate application drafts
 - **WHEN** the user tailors resumes for two different applications
@@ -104,10 +127,10 @@ Documentation SHALL explain that selected profile records and the supplied job d
 - **THEN** they are informed which personal content is supplied to Copilot and advised not to include secrets
 
 ### Requirement: Produce measurable ATS-oriented output
-Tailored output SHALL use a text-based single-column layout with conventional section headings and stable reading order. Deterministic validation SHALL check generated YAML fields and the rendered PDF's selectable/extractable text, expected headings/order, PDF text placement for repeated multi-column body flow, and page count. The system SHALL NOT claim universal compatibility with all ATS vendors.
+Tailored and master output SHALL use a text-based single-column layout with conventional section headings and stable reading order. Deterministic validation SHALL check generated YAML fields and the rendered PDF's selectable/extractable text, expected headings/order, and PDF text placement for repeated multi-column body flow. Tailored output SHALL additionally be checked for exactly one page; master output MAY span multiple pages. The system SHALL NOT claim universal compatibility with all ATS vendors.
 
 #### Scenario: Validate ATS-oriented structure
-- **WHEN** a tailored PDF is generated
+- **WHEN** a tailored or master PDF is generated
 - **THEN** checks confirm it has extractable text, expected conventional sections in order, and no repeated multi-column body flow
 
 #### Scenario: Omit empty sections
@@ -115,7 +138,7 @@ Tailored output SHALL use a text-based single-column layout with conventional se
 - **THEN** the renderer omits its heading and wrapper while preserving the order of sections that do contain content
 
 ### Requirement: Prioritize strong role-fit evidence and use page space effectively
-For each tailored draft, the workflow SHALL select the strongest supported experience, project, and achievement evidence that complements both the candidate's background and the target role. It SHALL map major job requirements to evidence, favor concrete outcomes and meaningful contributions over redundant keyword lists, and use relevant evidence to approach a soft target of 900 words in the rendered resume. The word count SHALL be measured from extractable text in the rendered PDF and exposed in `status.json`; the workflow SHALL use this measure instead of screenshots or visual page inspection to assess content fullness. It SHALL NOT add filler, duplicate claims, or unsupported facts to increase length. Word-count targeting SHALL NOT come at the expense of readability, factual traceability, or the one-page limit.
+For each tailored draft, the workflow SHALL select the strongest supported experience, project, and achievement evidence that complements both the candidate's background and the target role. It SHALL map major job requirements to evidence, favor concrete outcomes and meaningful contributions over redundant keyword lists, and use relevant evidence to approach a soft target of 900 words in the rendered resume. The word count SHALL be measured from extractable text in the rendered PDF and exposed in `status.json`; the workflow SHALL use this measure instead of screenshots or visual page inspection to assess content fullness. It SHALL NOT add filler, duplicate claims, or unsupported facts to increase length. Word-count targeting SHALL NOT come at the expense of readability, factual traceability, or the one-page limit. These role-fit and word-count selection rules SHALL NOT restrict master resumes, which SHALL preserve all distinct supported profile evidence regardless of length.
 
 #### Scenario: Enrich a draft below the word target
 - **WHEN** a rendered draft is below the 900-word target and relevant supported evidence was omitted

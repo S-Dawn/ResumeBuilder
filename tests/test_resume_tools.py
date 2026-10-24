@@ -578,6 +578,100 @@ class DraftTests(unittest.TestCase):
         self.assertNotIn("<h2>Projects</h2>", html_content)
         self.assertNotIn("<ul>\n            \n        </ul>", html_content)
 
+    def test_master_draft_includes_all_evidence_and_allows_multiple_pages(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            draft_dir = resume_tools.create_draft(
+                "master-resume",
+                root / "generated",
+                "cancel",
+                draft_type="master",
+            )
+            resume = sample_resume()
+            resume["experience"][0]["highlights"] = [
+                f"Delivered supported project outcome number {index}."
+                for index in range(170)
+            ]
+            write_draft_files(draft_dir, profile_dir, resume)
+            (draft_dir / "fit-report.md").unlink()
+            (draft_dir / "master-report.md").write_text(
+                "# Master resume report\n\n"
+                "## Conflicting evidence excluded\n"
+                "- None identified\n",
+                encoding="utf-8",
+            )
+
+            pages = resume_tools.render_draft(
+                draft_dir,
+                profile_dir,
+                1,
+                generated_root=root / "generated",
+            )
+            status = json.loads((draft_dir / "status.json").read_text(encoding="utf-8"))
+
+        self.assertGreater(pages, 1)
+        self.assertEqual(status["state"], "validated")
+        self.assertEqual(status["draft_type"], "master")
+        self.assertEqual(status["page_count"], pages)
+        self.assertGreater(status["word_count"], 900)
+
+    def test_master_draft_rejects_omitted_profile_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            record_path = profile_dir / "record.md"
+            record_path.write_text(
+                record_path.read_text(encoding="utf-8")
+                + "\n- [second-evidence] Added another supported outcome.\n",
+                encoding="utf-8",
+            )
+            draft_dir = resume_tools.create_draft(
+                "master-resume",
+                root / "generated",
+                "cancel",
+                draft_type="master",
+            )
+            write_draft_files(draft_dir, profile_dir)
+            (draft_dir / "fit-report.md").unlink()
+            master_report_path = draft_dir / "master-report.md"
+            master_report_path.write_text(
+                "# Master resume report\n\n"
+                "## Conflicting evidence excluded\n"
+                "- None identified\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                resume_tools.WorkflowError,
+                "must match omitted profile evidence",
+            ):
+                resume_tools.render_draft(
+                    draft_dir,
+                    profile_dir,
+                    1,
+                    generated_root=root / "generated",
+                )
+
+            master_report_path.write_text(
+                "# Master resume report\n\n"
+                "## Conflicting evidence excluded\n"
+                "- Conflicting claims — evidence: `second-evidence`\n",
+                encoding="utf-8",
+            )
+            pages = resume_tools.render_draft(
+                draft_dir,
+                profile_dir,
+                2,
+                generated_root=root / "generated",
+            )
+            status = json.loads((draft_dir / "status.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(status["state"], "validated")
+
     def test_eight_failed_page_attempts_are_retained_and_ninth_is_rejected(self) -> None:
         class TwoPageHtml:
             def __init__(self, *_args: object, **_kwargs: object) -> None:
