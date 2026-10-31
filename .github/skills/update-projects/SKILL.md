@@ -5,7 +5,7 @@ description: Refine an existing project in the canonical career profile or add a
 
 # Update project records
 
-Use this skill for focused changes to a project record in the canonical profile under `profile/projects/`. Full-resume ingestion across record types belongs to `maintain-profile`. Do not edit the repository-root `resume.yaml` or application drafts under `generated/`.
+Use this skill for focused changes to a project record in the canonical profile under `profile/projects/`, including corresponding updates to `profile/skills.md` when the project provides new evidence of the user's skills. Full-resume ingestion across record types belongs to `maintain-profile`. Do not edit the repository-root `resume.yaml` or application drafts under `generated/`.
 
 ## Read the shared contract
 
@@ -28,9 +28,9 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
    poetry run python resume_tools.py profile-index --output <temporary-index-path>
    ```
 
-   Read the relevant entry and candidate project Markdown record. If no record matches, prepare a new record using `profile/README.md`'s frontmatter format. If indexing fails, report the error and stop.
+   Read the relevant entries and candidate project Markdown record, plus the skills entry and `profile/skills.md`. If no project record matches, prepare a new record using `profile/README.md`'s frontmatter format. If indexing fails, report the error and stop.
 2. If the target project is ambiguous, ask the user before editing. Preserve unrelated projects and claims.
-3. Include only supported facts. Ask about conflicts in dates, scope, technologies, metrics, personal contribution, or outcomes instead of guessing.
+3. Include only supported facts. Ask about conflicts in dates, scope, technologies, metrics, personal contribution, or outcomes instead of guessing. Compare the project facts with `profile/skills.md`; when they support a new skill claim, update that record in the same batch by adding missing skills to its frontmatter `skills` list and adding traceable evidence under `## Evidence`. A technology used by a project is not, by itself, evidence of the user's skill: establish the user's own contribution or experience from user-provided facts or relevant canonical evidence, and ask if unclear. Preserve the skills record unchanged when no new or materially changed skill claim is supported.
 4. Preserve an evidence ID when wording changes but the factual meaning does not. For a materially changed assertion, propose a new unique ID and replace the old claim in the same diff. Use a new unique ID for each newly added claim.
 5. Do not delete claims or records unless the user explicitly requests deletion; include the removal in the diff and obtain approval.
 6. Add a `## Source notes` section for new or materially changed claims only. Use a keyed, non-bullet line:
@@ -40,18 +40,19 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
    ```
 
    For repository evidence, use a concise repository label/ref in the source label and a relative path plus symbol/line locator when useful. Identify when the cited content is from the uncommitted working tree. Never record an absolute path or copy source text. Unchanged historical claims need no note unless the user asks.
-7. Build one whole-batch operations JSON file outside the repository, containing only project record writes and explicit deletions:
+7. Build one whole-batch operations JSON file outside the repository, containing only the affected project and skills record writes and explicit deletions:
 
    ```json
    {
      "writes": {
-       "projects/example-project.md": "---\nid: project-example\n...\n"
+       "projects/example-project.md": "---\nid: project-example\n...\n",
+       "skills.md": "---\nid: skills\n...\n"
      },
      "deletes": []
    }
    ```
 
-   Paths are relative to `profile/`; do not include `README.md`, `index.yaml`, project source files, or unrelated files.
+   Include `skills.md` only when its claims or metadata need updating. Paths are relative to `profile/`; do not include `README.md`, `index.yaml`, project source files, or unrelated files.
 
 ## Validate, preview, and apply
 
