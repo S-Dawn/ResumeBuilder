@@ -27,3 +27,5 @@ profile/*
 
 # ResumeBuilder skills local config
 resumebuilder-skills.config.json
+
+.agents/skills/security*
