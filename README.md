@@ -64,6 +64,15 @@ For a job-tailored draft, the skill:
 4. Uses the extracted PDF word count to guide content revisions toward a soft 900-word target without screenshots; strict one-page validation and readability remain authoritative.
 5. Presents the draft for human review; it does not submit applications.
 
+For a market resume (no job description, market-oriented curation), the skill:
+
+1. Infers a candidate target role from the profile's title, domains, skills, and experience evidence.
+2. Presents the inferred role to the user for confirmation; the user may confirm, correct, or exit.
+3. Invokes web search per skill call for current MNC hiring expectations, required skills, and trends for the confirmed role.
+4. Curates profile evidence aligned to those trends under the same word-limit constraint as tailored mode: ~900 words, strict one-page fit, up to eight sequential render attempts.
+5. Produces `market-report.md` documenting the confirmed role, trend sources, omitted-evidence rationale, and conflicting claims.
+6. If web search is unavailable, prompts the user to proceed with the LLM knowledge base or exit; never fabricates trend data.
+
 The skill may substantially rewrite claims, but it must not invent or alter factual claims. It flags conflicting source evidence and, for tailored drafts, identifies unsupported job requirements instead of inventing qualifications. ATS-oriented checks cover text extraction, conventional headings/order, and single-column layout; tailored drafts are also checked for one-page fit. These checks do not guarantee compatibility with every ATS vendor.
 
 Tailored fit reports use `Evidence-backed matches` and `Unsupported or weakly supported requirements` sections. Supported requirements cite profile evidence IDs, and validation rejects unknown IDs or missing sections. Master resumes have no fit report because no target role is assessed.

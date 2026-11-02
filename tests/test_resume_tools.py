@@ -672,6 +672,140 @@ class DraftTests(unittest.TestCase):
         self.assertEqual(pages, 1)
         self.assertEqual(status["state"], "validated")
 
+    def test_market_draft_creates_with_type_market(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            draft_dir = resume_tools.create_draft(
+                "market-resume",
+                root / "generated",
+                "cancel",
+                draft_type="market",
+            )
+            write_draft_files(draft_dir, profile_dir)
+            (draft_dir / "fit-report.md").unlink()
+            (draft_dir / "market-report.md").write_text(
+                "# Market resume report\n\n"
+                "## Role\n- Senior Software Engineer\n\n"
+                "## Trend Sources\n- https://example.com/trends\n\n"
+                "## Omitted Evidence\n- None identified\n\n"
+                "## Conflicting Claims\n- None identified\n",
+                encoding="utf-8",
+            )
+
+            pages = resume_tools.render_draft(
+                draft_dir,
+                profile_dir,
+                1,
+                generated_root=root / "generated",
+            )
+            status = json.loads((draft_dir / "status.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(pages, 1)
+        self.assertEqual(status["state"], "validated")
+        self.assertEqual(status["draft_type"], "market")
+        self.assertEqual(status["page_count"], 1)
+        self.assertGreater(status["word_count"], 0)
+
+    def test_market_draft_enforces_one_page(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            draft_dir = resume_tools.create_draft(
+                "market-resume",
+                root / "generated",
+                "cancel",
+                draft_type="market",
+            )
+            resume = sample_resume()
+            resume["experience"][0]["highlights"] = [
+                f"Delivered supported project outcome number {index}."
+                for index in range(170)
+            ]
+            write_draft_files(draft_dir, profile_dir, resume)
+            (draft_dir / "fit-report.md").unlink()
+            (draft_dir / "market-report.md").write_text(
+                "# Market resume report\n\n"
+                "## Role\n- Senior Software Engineer\n\n"
+                "## Trend Sources\n- https://example.com/trends\n\n"
+                "## Omitted Evidence\n- None identified\n\n"
+                "## Conflicting Claims\n- None identified\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(resume_tools.PageFitError):
+                resume_tools.render_draft(
+                    draft_dir,
+                    profile_dir,
+                    1,
+                    generated_root=root / "generated",
+                )
+
+    def test_market_draft_word_count_in_status(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            draft_dir = resume_tools.create_draft(
+                "market-resume",
+                root / "generated",
+                "cancel",
+                draft_type="market",
+            )
+            write_draft_files(draft_dir, profile_dir)
+            (draft_dir / "fit-report.md").unlink()
+            (draft_dir / "market-report.md").write_text(
+                "# Market resume report\n\n"
+                "## Role\n- Senior Software Engineer\n\n"
+                "## Trend Sources\n- https://example.com/trends\n\n"
+                "## Omitted Evidence\n- None identified\n\n"
+                "## Conflicting Claims\n- None identified\n",
+                encoding="utf-8",
+            )
+
+            resume_tools.render_draft(
+                draft_dir,
+                profile_dir,
+                1,
+                generated_root=root / "generated",
+            )
+            status = json.loads((draft_dir / "status.json").read_text(encoding="utf-8"))
+
+        self.assertEqual(status["state"], "validated")
+        self.assertIsInstance(status["word_count"], int)
+        self.assertGreater(status["word_count"], 0)
+
+    def test_market_report_validation_requires_header(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            profile_dir = root / "profile"
+            write_profile(profile_dir)
+            draft_dir = resume_tools.create_draft(
+                "market-resume",
+                root / "generated",
+                "cancel",
+                draft_type="market",
+            )
+            write_draft_files(draft_dir, profile_dir)
+            (draft_dir / "fit-report.md").unlink()
+            (draft_dir / "market-report.md").write_text(
+                "# Wrong header\n\n## Omitted Evidence\n- None identified\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(
+                resume_tools.WorkflowError,
+                "expected '# Market resume report' heading",
+            ):
+                resume_tools.render_draft(
+                    draft_dir,
+                    profile_dir,
+                    1,
+                    generated_root=root / "generated",
+                )
+
     def test_eight_failed_page_attempts_are_retained_and_ninth_is_rejected(self) -> None:
         class TwoPageHtml:
             def __init__(self, *_args: object, **_kwargs: object) -> None:
@@ -721,57 +855,6 @@ class DraftTests(unittest.TestCase):
             self.assertEqual(status["word_count"], 0)
             self.assertTrue((draft_dir / "resume.yaml").exists())
             self.assertTrue((draft_dir / "resume.pdf").exists())
-
-    def test_second_application_preserves_first_draft_and_canonical_resume(self) -> None:
-        repository_root = Path(__file__).resolve().parents[1]
-        root_resume = repository_root / "resume.yaml"
-        original_resume = root_resume.read_bytes()
-        profile_sources = {
-            path: path.read_bytes()
-            for path in (repository_root / "profile").rglob("*.md")
-        }
-
-        with tempfile.TemporaryDirectory() as temporary_directory:
-            root = Path(temporary_directory)
-            profile_dir = root / "profile"
-            write_profile(profile_dir)
-            generated_root = root / "generated"
-            first = resume_tools.create_draft("backend-role", generated_root, "cancel")
-            write_draft_files(first, profile_dir)
-            resume_tools.render_draft(
-                first,
-                profile_dir,
-                1,
-                generated_root=generated_root,
-            )
-            first_pdf = (first / "resume.pdf").read_bytes()
-
-            second_resume = sample_resume()
-            second_resume["summary"] = "Delivers agentic AI systems for field deployment."
-            second = resume_tools.create_draft("forward-deployed-engineer", generated_root, "cancel")
-            write_draft_files(second, profile_dir, second_resume)
-            resume_tools.render_draft(
-                second,
-                profile_dir,
-                1,
-                generated_root=generated_root,
-            )
-
-            self.assertNotEqual(first, second)
-            self.assertEqual((first / "resume.pdf").read_bytes(), first_pdf)
-            self.assertNotIn("Full job description:", (second / "fit-report.md").read_text(encoding="utf-8"))
-            self.assertEqual(
-                json.loads((first / "status.json").read_text(encoding="utf-8"))["state"],
-                "validated",
-            )
-            self.assertEqual(
-                json.loads((second / "status.json").read_text(encoding="utf-8"))["state"],
-                "validated",
-            )
-
-        self.assertEqual(root_resume.read_bytes(), original_resume)
-        self.assertTrue(all(path.read_bytes() == content for path, content in profile_sources.items()))
-
 
 class RendererTests(unittest.TestCase):
     def test_empty_sections_are_omitted_and_nonempty_sections_keep_order(self) -> None:

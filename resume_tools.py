@@ -908,6 +908,26 @@ def validate_master_report(
         )
 
 
+def validate_market_report(report_path: Path, profile_dir: Path) -> None:
+    try:
+        report = report_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise WorkflowError(f"Cannot read market report {report_path}: {exc}") from exc
+
+    if not report.startswith("# Market resume report"):
+        raise WorkflowError(
+            f"{report_path}: expected '# Market resume report' heading."
+        )
+
+    sections = ["## Role", "## Trend Sources", "## Omitted Evidence", "## Conflicting Claims"]
+    present = [s for s in sections if s in report]
+    if len(present) < 2:
+        raise WorkflowError(
+            f"{report_path}: market report should include role, trend sources, "
+            "omitted evidence, and conflicting claims sections."
+        )
+
+
 def slugify(value: str) -> str:
     slug = re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")
     if not slug or not RECORD_ID.fullmatch(slug):
@@ -929,7 +949,7 @@ def create_draft(
     collision: str,
     draft_type: str = "tailored",
 ) -> Path:
-    if draft_type not in {"tailored", "master"}:
+    if draft_type not in {"tailored", "master", "market"}:
         raise WorkflowError(f"Unsupported draft type: {draft_type}")
     root = output_root.resolve()
     root.mkdir(parents=True, exist_ok=True)
@@ -1039,13 +1059,16 @@ def render_draft(
         resume_path = draft_dir / "resume.yaml"
         source_map_path = draft_dir / "source-map.json"
         draft_type = status.get("draft_type", "tailored")
-        if draft_type not in {"tailored", "master"}:
+        if draft_type not in {"tailored", "master", "market"}:
             raise WorkflowError(f"Unsupported draft type in status: {draft_type}")
         fit_report_path = draft_dir / "fit-report.md"
         master_report_path = draft_dir / "master-report.md"
+        market_report_path = draft_dir / "market-report.md"
         required_files = [resume_path, source_map_path]
         if draft_type == "tailored":
             required_files.append(fit_report_path)
+        elif draft_type == "market":
+            required_files.append(market_report_path)
         else:
             required_files.append(master_report_path)
         for required_file in required_files:
@@ -1056,6 +1079,8 @@ def render_draft(
         if draft_type == "master":
             missing_evidence = profile_evidence_ids(profile_dir) - mapped_evidence_ids
             validate_master_report(master_report_path, profile_dir, missing_evidence)
+        elif draft_type == "market":
+            validate_market_report(market_report_path, profile_dir)
         else:
             validate_fit_report(fit_report_path, profile_dir)
 
@@ -1068,7 +1093,7 @@ def render_draft(
         status["word_count"] = count_pdf_words(pdf_path)
         write_status(draft_dir, status)
         page_count = len(PdfReader(str(pdf_path)).pages)
-        if draft_type == "tailored" and page_count != 1:
+        if draft_type in ("tailored", "market") and page_count != 1:
             raise PageFitError(page_count)
         if draft_type == "master":
             page_count = validate_pdf_output(
@@ -1129,9 +1154,9 @@ def build_parser() -> argparse.ArgumentParser:
     draft_parser.add_argument("--output-root", type=Path, default=Path("generated"))
     draft_parser.add_argument(
         "--type",
-        choices=("tailored", "master"),
+        choices=("tailored", "master", "market"),
         default="tailored",
-        help="Draft type; master resumes include all profile evidence and allow multiple pages.",
+        help="Draft type; master resumes include all profile evidence and allow multiple pages. Market resumes curate profile evidence for current MNC hiring trends and render a one-page ~900-word resume.",
     )
     draft_parser.add_argument(
         "--collision",
@@ -1139,7 +1164,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="ask",
     )
 
-    render_parser = subparsers.add_parser("render", help="Validate and render an application draft.")
+    render_parser = subparsers.add_parser("render", help="Validate and render an application draft (tailored, master, or market).")
     render_parser.add_argument("--draft-dir", required=True, type=Path)
     render_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
     render_parser.add_argument("--generated-root", type=Path, default=Path("generated"))
