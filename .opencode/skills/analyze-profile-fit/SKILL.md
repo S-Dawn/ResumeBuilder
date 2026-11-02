@@ -1,6 +1,7 @@
 ---
 name: analyze-profile-fit
-description: Compare the canonical career profile with a job description and report evidence-backed fit, gaps, and improvement opportunities without creating a resume.
+description: Compare the canonical profile with a job description and report evidence-backed fit, gaps, and improvement opportunities without creating a resume.
+disable-model-invocation: true
 ---
 
 # Analyze profile fit

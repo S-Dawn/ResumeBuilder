@@ -24,3 +24,6 @@ generated/
 *.html
 
 profile/*
+
+# ResumeBuilder skills local config
+resumebuilder-skills.config.json

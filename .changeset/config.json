@@ -1,0 +1,9 @@
+{
+  "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
+  "changelog": "@changesets/changelog-github",
+  "repo": "https://github.com/S-Dawn/ResumeBuilder",
+  "access": "public",
+  "baseBranches": ["main"],
+  "updateInternalDependencies": "always",
+  "ignore": []
+}

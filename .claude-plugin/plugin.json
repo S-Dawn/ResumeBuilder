@@ -1,0 +1,27 @@
+{
+  "name": "resumebuilder-skills",
+  "version": "1.0.0",
+  "description": "ResumeBuilder agent skills for real engineering: tailor resume, maintain profile, analyze profile fit, update projects. Plug-and-play, not vibe coding.",
+  "author": {
+    "name": "Subham Dawn",
+    "url": "https://github.com/S-Dawn"
+  },
+  "homepage": "https://github.com/S-Dawn/ResumeBuilder",
+  "repository": "https://github.com/S-Dawn/ResumeBuilder",
+  "license": "MIT",
+  "keywords": [
+    "resume",
+    "cv",
+    "skills",
+    "ats",
+    "profiling",
+    "career"
+  ],
+  "skills": [
+    "./.opencode/skills/tailor-resume",
+    "./.opencode/skills/maintain-profile",
+    "./.opencode/skills/analyze-profile-fit",
+    "./.opencode/skills/update-projects",
+    "./.opencode/skills/setup-resumebuilder-skills"
+  ]
+}

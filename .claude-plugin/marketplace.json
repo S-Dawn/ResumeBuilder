@@ -1,0 +1,23 @@
+{
+  "name": "resumebuilder",
+  "owner": {
+    "name": "Subham Dawn",
+    "url": "https://github.com/S-Dawn"
+  },
+  "description": "ResumeBuilder agent skills for resume generation and profile management, as an installable plugin.",
+  "plugins": [
+    {
+      "name": "resumebuilder-skills",
+      "source": "./",
+      "description": "ResumeBuilder agent skills (tailor resume, maintain profile, analyze profile fit, update projects).",
+      "category": "productivity",
+      "keywords": [
+        "resume",
+        "cv",
+        "skills",
+        "ats",
+        "profiling"
+      ]
+    }
+  ]
+}

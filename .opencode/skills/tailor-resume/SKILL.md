@@ -1,6 +1,7 @@
 ---
 name: tailor-resume
 description: Create a job-tailored resume from a job description or a complete master resume when no job description is supplied, preserving source traceability and requiring human review.
+disable-model-invocation: true
 ---
 
 # Tailor a resume

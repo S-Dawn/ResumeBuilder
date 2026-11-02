@@ -18,6 +18,91 @@ A Python/WeasyPrint resume generator with a reusable career evidence profile and
 
 ## Installation
 
+### Install the skills in your agent
+
+[![skills.sh](https://skills.sh/b/S-Dawn/ResumeBuilder)](https://skills.sh/S-Dawn/ResumeBuilder)
+
+ResumeBuilder agent skills you can install once and use across your agent
+runtime: tailor resume, maintain profile, analyze profile fit, and update
+projects.
+
+<details>
+<summary><strong>Claude Code</strong></summary>
+
+```bash
+claude plugin install resumebuilder-skills
+```
+
+Updates itself by default.
+
+</details>
+
+<details>
+<summary><strong>Codex</strong></summary>
+
+```bash
+codex plugin marketplace add S-Dawn/ResumeBuilder
+codex plugin add resumebuilder-skills@resumebuilder
+```
+
+Updates itself at startup.
+
+</details>
+
+<details>
+<summary><strong>GitHub Copilot</strong> (CLI and VS Code)</summary>
+
+```bash
+copilot plugin marketplace add S-Dawn/ResumeBuilder
+copilot plugin install resumebuilder-skills@resumebuilder
+```
+
+Then, once, add to `~/.copilot/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "resumebuilder": { "source": { "source": "github", "repo": "S-Dawn/ResumeBuilder" }, "autoUpdate": true }
+  }
+}
+```
+
+In VS Code, run **Chat: Install Plugin From Source** and enter
+`https://github.com/S-Dawn/ResumeBuilder`. It updates daily.
+
+</details>
+
+<details>
+<summary><strong>Gemini CLI</strong> (manual updates)</summary>
+
+```bash
+gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path .opencode/skills
+```
+
+Re-run to update.
+
+</details>
+
+<details>
+<summary><strong>Any other agent</strong> (manual updates)</summary>
+
+```bash
+npx skills@latest add S-Dawn/ResumeBuilder -a <agent>  # cursor, opencode, devin, windsurf, amp, pi; omit -a to choose
+```
+
+When the installer asks which skills to take, include
+`setup-resumebuilder-skills`. To update, run `npx skills@latest update`, and
+re-run `add` to pick up new skills.
+
+</details>
+
+### Then run setup once per repo
+
+In your agent, run `/setup-resumebuilder-skills`. It configures your profile
+path, draft output directory, and ATS validation tools.
+
+### Install the repo itself (for local development)
+
 ```bash
 git clone https://github.com/S-Dawn/ResumeBuilder.git
 cd ResumeBuilder

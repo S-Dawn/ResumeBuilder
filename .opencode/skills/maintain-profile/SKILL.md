@@ -1,6 +1,7 @@
 ---
 name: maintain-profile
 description: Update the canonical career profile from user-provided facts or a readable full resume, preserving evidence and requiring approval.
+disable-model-invocation: true
 ---
 
 # Maintain the career profile

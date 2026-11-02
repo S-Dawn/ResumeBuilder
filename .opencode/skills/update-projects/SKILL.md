@@ -1,6 +1,7 @@
 ---
 name: update-projects
 description: Refine an existing project in the canonical career profile or add a new project with traceable evidence and explicit approval.
+disable-model-invocation: true
 ---
 
 # Update project records
