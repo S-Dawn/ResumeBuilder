@@ -27,7 +27,7 @@ Plus a setup skill:
 
 The repo does **not** publish an npm package containing the skill code. Instead:
 
-1. Skills live as `SKILL.md` files with YAML frontmatter under `.opencode/skills/`.
+1. Skills live as `SKILL.md` files with YAML frontmatter under `skills/`.
 2. A `.claude-plugin/plugin.json` manifest lists the promoted skill directories (single source of truth, curated subset).
 3. A `.claude-plugin/marketplace.json` makes the repo its own marketplace for Codex, Copilot, and VS Code.
 4. A root `package.json` holds the version used by managed routes to detect updates.
@@ -43,7 +43,7 @@ The repo does **not** publish an npm package containing the skill code. Instead:
 | Claude Code | `claude plugin install resumebuilder-skills` | Yes (official marketplace) |
 | Codex | `codex plugin marketplace add S-Dawn/ResumeBuilder` then `codex plugin add resumebuilder-skills@S-Dawn` | Yes (at startup) |
 | Copilot CLI / VS Code | `copilot plugin marketplace add S-Dawn/ResumeBuilder` then `copilot plugin install resumebuilder-skills@S-Dawn` (+ `autoUpdate: true` in settings) | Yes |
-| Gemini CLI | `gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path .opencode/skills` | No (re-run to update) |
+| Gemini CLI | `gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path skills/` | No (re-run to update) |
 | Any other agent | `npx skills@latest add S-Dawn/ResumeBuilder -a <agent>` | No (`npx skills update` + re-run `add`) |
 
 ## Files to create / modify

@@ -76,7 +76,7 @@ In VS Code, run **Chat: Install Plugin From Source** and enter
 <summary><strong>Gemini CLI</strong> (manual updates)</summary>
 
 ```bash
-gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path .opencode/skills
+gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path skills/
 ```
 
 Re-run to update.

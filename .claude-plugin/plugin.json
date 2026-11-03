@@ -18,10 +18,10 @@
     "career"
   ],
   "skills": [
-    "./.opencode/skills/tailor-resume",
-    "./.opencode/skills/maintain-profile",
-    "./.opencode/skills/analyze-profile-fit",
-    "./.opencode/skills/update-projects",
-    "./.opencode/skills/setup-resumebuilder-skills"
+    "./skills/tailor-resume",
+    "./skills/maintain-profile",
+    "./skills/analyze-profile-fit",
+    "./skills/update-projects",
+    "./skills/setup-resumebuilder-skills"
   ]
 }

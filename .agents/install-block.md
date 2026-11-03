@@ -88,7 +88,7 @@ per folder gives the promoted set.
 <canonical-block name="gemini">
 
 ```bash
-gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path .opencode/skills
+gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path skills/
 ```
 
 Re-run to update.
