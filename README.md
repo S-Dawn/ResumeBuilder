@@ -13,7 +13,7 @@ A Python/WeasyPrint resume generator with a reusable career evidence profile and
 
 ## Requirements
 
-- Python `>=3.10`
+- Python `>=3.11`
 - [Poetry](https://python-poetry.org/) for dependency management
 
 ## Installation
