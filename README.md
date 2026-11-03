@@ -1,221 +1,140 @@
 # ResumeBuilder
 
-A Python/WeasyPrint resume generator with a reusable career evidence profile and GitHub Copilot skill for creating role-specific resume drafts.
+Turn your career history into a stronger, role-ready resume—without losing sight of the evidence behind every claim. ResumeBuilder brings a suite of AI agent skills and a Python engine together to help you build a reusable career profile, evaluate how your experience maps to a job, and create tailored, master, or market-focused resumes. Use the skills in the agent runtime you prefer—including Claude Code, Codex, OpenCode, GitHub Copilot, and more. Every draft is traceable to your profile, validated, and ready for your review.
 
-## Features
+You stay in control: ResumeBuilder never invents qualifications or submits applications on your behalf.
 
-- Keep complete career evidence in `profile/` Markdown records with YAML frontmatter and stable claim IDs.
-- Generate a compact index from profile metadata on demand; the Copilot skill reads only relevant profile details.
-- Tailor a draft from a pasted or file-based job description with a source map and fit report, or create a consolidated master resume when no job description is supplied.
-- Keep each draft's YAML, source map, HTML, and PDF in an isolated directory under `generated/`; tailored drafts include a fit report and master resumes include a conflict report.
-- Check generated YAML, source references, PDF text, conventional section order, and strict one-page fit for tailored drafts. Master resumes retain all profile evidence and may span multiple pages.
-- Preserve the original `resume.yaml` renderer workflow.
+## Install the skills
 
-## Requirements
-
-- Python `>=3.11`
-- [Poetry](https://python-poetry.org/) for dependency management
-
-## Installation
-
-### Install the skills in your agent
-
-[![skills.sh](https://skills.sh/b/S-Dawn/ResumeBuilder)](https://skills.sh/S-Dawn/ResumeBuilder)
-
-ResumeBuilder agent skills you can install once and use across your agent
-runtime: tailor resume, maintain profile, analyze profile fit, and update
-projects.
-
-<details>
-<summary><strong>Claude Code</strong></summary>
+Install the skills in the project where you want to use them. ResumeBuilder supports a range of agent runtimes, including Claude Code, Codex, OpenCode, and GitHub Copilot. Use the runtime's native plugin route when available, or install with skills.sh. To choose an agent interactively with skills.sh:
 
 ```bash
-claude plugin install resumebuilder-skills
+npx skills@latest add S-Dawn/ResumeBuilder
 ```
 
-Updates itself by default.
-
-</details>
-
-<details>
-<summary><strong>Codex</strong></summary>
+Or select an agent explicitly:
 
 ```bash
-codex plugin marketplace add S-Dawn/ResumeBuilder
-codex plugin add resumebuilder-skills@resumebuilder
+npx skills@latest add S-Dawn/ResumeBuilder -a <agent>
 ```
 
-Updates itself at startup.
-
-</details>
-
-<details>
-<summary><strong>GitHub Copilot</strong> (CLI and VS Code)</summary>
+When prompted to select skills, install `setup-resumebuilder-skills` along with the skills you plan to use. You can install one skill by name:
 
 ```bash
-copilot plugin marketplace add S-Dawn/ResumeBuilder
-copilot plugin install resumebuilder-skills@resumebuilder
+npx skills@latest add S-Dawn/ResumeBuilder --skill=setup-resumebuilder-skills
 ```
 
-Then, once, add to `~/.copilot/settings.json`:
-
-```json
-{
-  "extraKnownMarketplaces": {
-    "resumebuilder": { "source": { "source": "github", "repo": "S-Dawn/ResumeBuilder" }, "autoUpdate": true }
-  }
-}
-```
-
-In VS Code, run **Chat: Install Plugin From Source** and enter
-`https://github.com/S-Dawn/ResumeBuilder`. It updates daily.
-
-</details>
-
-<details>
-<summary><strong>Gemini CLI</strong> (manual updates)</summary>
+The skills.sh installer installs skill files for the agent you select. To update installed skills, run:
 
 ```bash
-gemini skills install https://github.com/S-Dawn/ResumeBuilder.git --path skills/
+npx skills@latest update
+npx skills@latest add S-Dawn/ResumeBuilder
 ```
 
-Re-run to update.
+This route uses manual updates. The repository also supports agent-native plugin installation routes; see [the install guide](.agents/install-block.md) for those options.
 
-</details>
+## Onboard a project
 
-<details>
-<summary><strong>Any other agent</strong> (manual updates)</summary>
+Set up ResumeBuilder once in each project where you plan to use it:
 
-```bash
-npx skills@latest add S-Dawn/ResumeBuilder -a <agent>  # cursor, opencode, devin, windsurf, amp, pi; omit -a to choose
-```
+1. Open that project in your agent and run `/setup-resumebuilder-skills`.
+2. Follow the prompts to choose the canonical profile directory (default: `profile/`), draft output directory (default: `generated/`), and PDF/ATS validation tools.
+3. Make sure `uv` is installed. The setup skill uses `uvx` to run the published `resumebuilder-tools` engine. It writes `resumebuilder-skills.config.json` in the project root; the file is gitignored.
+4. Add or maintain your career profile in the configured profile directory. See [profile/README.md](profile/README.md) for its record format and evidence conventions.
+5. Use the relevant skill below. The profile and job-description content needed for a task may be sent to your configured agent model; the skills disclose this and request confirmation before reading files where required. Do not put secrets in your profile.
 
-When the installer asks which skills to take, include
-`setup-resumebuilder-skills`. To update, run `npx skills@latest update`, and
-re-run `add` to pick up new skills.
+The setup skill is a per-project configuration step, not a profile editor. Run it before using the other ResumeBuilder skills.
 
-</details>
+## ResumeBuilder skills
 
-### Then run setup once per repo
+Invoke these skills by name in your agent:
 
-In your agent, run `/setup-resumebuilder-skills`. It configures your profile
-path, draft output directory, and ATS validation tools.
+| Skill | What it does |
+|---|---|
+| `setup-resumebuilder-skills` | Configures profile and draft paths plus PDF validation for the current project. Run once per project, before the other skills. |
+| `maintain-profile` | Consolidates a full, general resume or career facts into the canonical profile. Prepares and validates a complete proposed diff, then waits for your explicit approval before applying it. |
+| `update-projects` | Adds or refines a project record, and updates the skills record when supported by the project evidence. Also previews and validates the whole change before asking for approval. |
+| `analyze-profile-fit` | Compares the profile with a job description and reports evidence-backed matches, gaps, and positioning opportunities. It does not create a resume or save a report. |
+| `tailor-resume` | Creates a job-tailored draft when you provide a job description; without one, helps create a complete master resume or a market-oriented resume. It renders and validates output for your review. |
 
-### Install the repo itself (for local development)
+### Maintaining your profile
+
+Use `/maintain-profile` for broad updates from a full, general resume or career facts you provide. Use `/update-projects` for a focused project addition or revision. Both skills:
+
+- Read the profile's editing contract and preserve existing supported claims.
+- Ask you to resolve ambiguous or conflicting facts rather than guessing.
+- Stage and validate a complete proposed change, show you the diff, and only apply it after you approve that exact diff.
+
+Do not use a tailored application resume as the source for your canonical profile. Do not edit the generated `profile/index.yaml` by hand; it is rebuilt from profile metadata.
+
+### Analyzing and creating resumes
+
+- **Fit analysis:** Run `/analyze-profile-fit` with a pasted job description or a path to one. The assessment describes what the profile documents; it is not a hiring prediction and profile silence does not mean you lack a qualification.
+- **Tailored resume:** Run `/tailor-resume` with a job description to create an application draft, fit report, source map, HTML, and PDF under the configured output directory. Review the content yourself; no application is submitted.
+- **Master resume:** Run `/tailor-resume` without a job description and ask for a complete career archive. It includes distinct supported profile evidence and reports conflicts that need clarification.
+- **Market resume:** Run `/tailor-resume` without a job description and ask for a market-oriented resume. The skill confirms a target role with you and uses current role-trend research when web search is available.
+
+## Codebase and local development
+
+### Repository layout
+
+- `skills/` — installable skill instructions.
+- `python_engine/` — profile, draft, validation, and PDF-rendering implementation.
+- `profile/` — example canonical profile records and their format guide.
+- `tests/` — Python unit tests.
+- `pyproject.toml` and `uv.lock` — Python package metadata, dependencies, and lockfile.
+- `.claude-plugin/` — plugin manifests for supported native installation routes.
+
+### Set up the development environment
+
+Requirements: Python 3.11 or newer and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone https://github.com/S-Dawn/ResumeBuilder.git
 cd ResumeBuilder
-poetry install
+uv sync
 ```
 
-## Generate from the legacy YAML
+### Run the tests and tools
+
+Run the test suite:
 
 ```bash
-# Reads resume.yaml and writes HTML/PDF to generated/
-poetry run python ResumeBuilder.py
-
-# Use a custom YAML configuration and output directory
-poetry run python ResumeBuilder.py --config path/to/myresume.yaml --output-dir output/
-
-# Enforce a one-page PDF and extracted-text checks
-poetry run python ResumeBuilder.py --strict-one-page
+uv run python -m unittest discover -s tests
 ```
 
-## Analyze profile fit with GitHub Copilot
-
-Use the **Analyze Profile Fit** skill with a pasted job description or a path to a job-description file to assess a role before deciding whether to apply. It compares relevant job qualifications with evidence in the canonical profile and reports supported, partially supported, and undocumented requirements with profile evidence IDs.
-
-The report includes a qualitative assessment and a transparent weighted evidence-coverage score: supported qualifications receive full credit, partial matches half credit, unsupported qualifications no credit, and explicitly required qualifications count twice as much as preferred or other requirements. The score describes only what the profile documents; it is not a hiring or ATS prediction. The analysis distinguishes information to verify in the profile, positioning ideas based on existing evidence, and conditional skill-development areas.
-
-This diagnostic does not create a resume, application draft, profile update, or retained report. For file-based job descriptions, the skill discloses that relevant job-description and profile contents are sent as context to the configured Copilot model and asks for confirmation before reading the file. The full job description is not retained. Profile silence is not treated as proof that the user lacks a qualification.
-
-## Tailor a resume with GitHub Copilot
-
-Use the **Tailor Resume** skill in GitHub Copilot in VS Code and provide either a pasted job description or a path to a job-description file to create a tailored draft. If you provide no job description, the skill creates a consolidated master resume from all profile records and evidence.
-
-For a master resume, the skill:
-
-1. Reads every indexed profile record and includes all distinct supported details.
-2. Produces `resume.yaml` and a `source-map.json` that trace every content field and cover every non-conflicting profile evidence ID.
-3. Creates `master-report.md` to disclose conflicting claims excluded for clarification.
-4. Creates an isolated `master-resume` draft, renders it, and validates its extracted text and single-column structure without a page or word-count limit.
-
-For a job-tailored draft, the skill:
-
-1. Rebuilds and reads `profile/index.yaml`, then fetches relevant profile records as needed.
-2. Produces a tailored `resume.yaml`, `source-map.json`, and `fit-report.md`.
-3. Creates an isolated application draft under `generated/`, renders it, and checks the actual PDF.
-4. Uses the extracted PDF word count to guide content revisions toward a soft 900-word target without screenshots; strict one-page validation and readability remain authoritative.
-5. Presents the draft for human review; it does not submit applications.
-
-For a market resume (no job description, market-oriented curation), the skill:
-
-1. Infers a candidate target role from the profile's title, domains, skills, and experience evidence.
-2. Presents the inferred role to the user for confirmation; the user may confirm, correct, or exit.
-3. Invokes web search per skill call for current MNC hiring expectations, required skills, and trends for the confirmed role.
-4. Curates profile evidence aligned to those trends under the same word-limit constraint as tailored mode: ~900 words, strict one-page fit, up to eight sequential render attempts.
-5. Produces `market-report.md` documenting the confirmed role, trend sources, omitted-evidence rationale, and conflicting claims.
-6. If web search is unavailable, prompts the user to proceed with the LLM knowledge base or exit; never fabricates trend data.
-
-The skill may substantially rewrite claims, but it must not invent or alter factual claims. It flags conflicting source evidence and, for tailored drafts, identifies unsupported job requirements instead of inventing qualifications. ATS-oriented checks cover text extraction, conventional headings/order, and single-column layout; tailored drafts are also checked for one-page fit. These checks do not guarantee compatibility with every ATS vendor.
-
-Tailored fit reports use `Evidence-backed matches` and `Unsupported or weakly supported requirements` sections. Supported requirements cite profile evidence IDs, and validation rejects unknown IDs or missing sections. Master resumes have no fit report because no target role is assessed.
-
-If an application output already exists, choose a numbered draft, explicitly authorize replacement, or cancel. The default when interaction is unavailable is cancellation. Failed drafts are retained and marked failed for diagnosis.
-
-### Copilot data handling
-
-Selected profile records and the job description are sent as context to the user's configured Copilot model. Do not store secrets in profile records. The full job description is not copied into retained generated artifacts.
-
-## Maintain the profile
-
-See [profile/README.md](profile/README.md) for the Markdown/frontmatter format, stable evidence IDs, validation, and index behavior. Validate and rebuild the compact index with:
+Show the profile and draft utility commands:
 
 ```bash
-poetry run python resume_tools.py validate-profile
-poetry run python resume_tools.py profile-index
+uv run python -m python_engine.resume_tools --help
 ```
 
-Use the **Maintain Profile** Copilot skill for full-resume or career-fact consolidation, and **Update Projects** for focused changes to project records. Both preview and validate the complete update before requesting explicit approval; neither treats a tailored application resume as a canonical source. File and selected project-repository content is sent to the configured Copilot model only after disclosure and confirmation.
+For example, validate the profile and rebuild its compact index:
 
-## Renderer YAML structure
-
-The renderer uses `highlights` for experience and project bullets:
-
-```yaml
-profile:
-  name: Your Name
-  title: Your Job Title
-  phone: "+1 234 567 8900"
-  email: you@example.com
-  location: City, Country
-  links:
-    - label: LinkedIn
-      url: "https://linkedin.com/in/yourprofile"
-summary: A concise professional summary.
-skills:
-  - category: Languages
-    items: [Python, Java]
-experience:
-  - role: Senior Software Engineer
-    company: Acme Corp
-    location: Remote
-    duration: Jan 2022 - Present
-    highlights:
-      - Built scalable microservices handling 10k requests per second.
-projects:
-  - name: Example Project
-    highlights:
-      - Reduced processing time by 30%.
-education:
-  - degree: B.Tech in Computer Science
-    institution: Example University
-    date: 2019
-    score: "GPA: 3.8"
-certifications_and_achievements:
-  - "Achievements: Example Award"
-  - "Certifications: Example Certificate"
+```bash
+uv run python -m python_engine.resume_tools validate-profile
+uv run python -m python_engine.resume_tools profile-index
 ```
 
-Empty optional sections are omitted from the rendered output.
+To render a resume from a YAML file, provide that file using the renderer's schema:
+
+```bash
+uv run python -m python_engine.ResumeBuilder \
+  --config path/to/resume.yaml \
+  --output-dir generated/
+```
+
+Add `--strict-one-page` to require a one-page PDF with extractable text and expected headings. The renderer reads `resume.yaml` by default if `--config` is omitted. See [python_engine/ResumeBuilder.py](python_engine/ResumeBuilder.py) and [python_engine/resume_tools.py](python_engine/resume_tools.py) for implementation and CLI details.
+
+## Contributing
+
+Contributions are welcome. For a substantial change, open an issue first to discuss the behavior or approach. For a pull request:
+
+1. Keep changes focused and update the relevant skill or documentation alongside code changes.
+2. Run the tests with `uv run python -m unittest discover -s tests`.
+3. For changes to distributable skills, include a Changesets entry so the plugin release can be versioned.
+4. Describe what changed, how you tested it, and any user-facing behavior changes.
+
+## Bug reports
+
+Report bugs in the [GitHub issue tracker](https://github.com/S-Dawn/ResumeBuilder/issues/new/choose). Include steps to reproduce, the expected and actual behavior, the agent/OS where relevant, and any error output. Remove personal profile data, job descriptions, credentials, and other private information from reports and logs.
