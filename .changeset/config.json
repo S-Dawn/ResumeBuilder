@@ -4,6 +4,6 @@
   "repo": "https://github.com/S-Dawn/ResumeBuilder",
   "access": "public",
   "baseBranches": ["main"],
-  "updateInternalDependencies": "always",
+  "updateInternalDependencies": "patch",
   "ignore": []
 }
