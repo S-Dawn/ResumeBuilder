@@ -4,11 +4,11 @@
 		{
 			"label": "Install Dependencies",
 			"type": "shell",
-			"command": "poetry",
+			"command": "uv",
 			"args": [
-				"install",
-				"--compile"
-			]
+				"sync"
+			],
+			"problemMatcher": []
 		},
 		{
 			"label": "Update OpenSpec Libraries",
@@ -18,32 +18,63 @@
 				"--yes",
 				"@fission-ai/openspec@latest",
 				"update"
-			]
+			],
+			"problemMatcher": []
 		},
 		{
 			"label": "Build Resume",
 			"type": "shell",
-			"command": "poetry",
+			"command": "uv",
 			"args": [
 				"run",
 				"python",
-				"ResumeBuilder.py"
+				"-m",
+				"python_engine.ResumeBuilder"
 			],
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			}
+			},
+			"problemMatcher": []
 		},
 		{
 			"label": "Run Resume Builder",
 			"type": "shell",
-			"command": "poetry",
+			"command": "uv",
 			"args": [
 				"run",
 				"python",
-				"ResumeBuilder.py"
+				"-m",
+				"python_engine.ResumeBuilder"
 			],
-			"group": "none"
+			"group": "none",
+			"problemMatcher": []
+		},
+		{
+			"label": "Run Python Tests",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"run",
+				"python",
+				"-m",
+				"unittest",
+				"discover",
+				"-s",
+				"tests"
+			],
+			"group": "test",
+			"problemMatcher": []
+		},
+		{
+			"label": "Build Python Package",
+			"type": "shell",
+			"command": "uv",
+			"args": [
+				"build"
+			],
+			"group": "none",
+			"problemMatcher": []
 		}
 	]
 }

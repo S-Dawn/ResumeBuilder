@@ -158,7 +158,7 @@ On your local machine (or any machine with `uv` installed):
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Verify
-uvx resumebuilder-tools@1.0.0 --help
+uvx resumebuilder-tools@1.0.1 --help
 ```
 
 You should see the CLI help with all subcommands:
@@ -180,9 +180,9 @@ https://pypi.org/project/resumebuilder-tools/
 Once trusted publishing is set up, you never touch PyPI manually again:
 
 1. Make changes to `python_engine/` or bump the version in `pyproject.toml`
-2. Commit and create a new tag: `git tag v1.0.1 && git push origin v1.0.1`
-3. The GitHub Actions workflow automatically builds and publishes
-4. Skills using `uvx resumebuilder-tools@1.0.1` will pick it up
+2. Push the changes to `main`, create a GitHub Release for the matching tag (for example, `v1.0.2`), and publish the release
+3. The release-triggered GitHub Actions workflow automatically builds and publishes
+4. Skills using `uvx resumebuilder-tools@1.0.2` will pick it up
 
 ---
 
@@ -192,8 +192,8 @@ Once trusted publishing is set up, you never touch PyPI manually again:
 |---------|-------------|-----|
 | Workflow fails: "no trusted publisher found" | Trusted publisher not added on PyPI, or workflow name mismatch | Double-check Step 3a; workflow filename must be exactly `release.yml` |
 | Workflow fails: "project name not found" | Project `resumebuilder-tools` not created on PyPI | Complete Step 2 |
-| `uvx resumebuilder-tools@1.0.0 --help` says package not found | Publish hasn't finished, or version mismatch | Wait for the workflow to complete; check https://pypi.org/project/resumebuilder-tools/ |
-| ImportError when running locally | Running `resume_tools.py` directly instead of as a module | Use `uv run -m python_engine.resume_tools <command>` or `uvx resumebuilder-tools@1.0.0 <command>` |
+| `uvx resumebuilder-tools@1.0.1 --help` says package not found | Publish hasn't finished, or version mismatch | Wait for the workflow to complete; check https://pypi.org/project/resumebuilder-tools/ |
+| ImportError when running locally | Running `resume_tools.py` directly instead of as a module | Use `uv run -m python_engine.resume_tools <command>` or `uvx resumebuilder-tools@1.0.1 <command>` |
 
 ---
 
@@ -214,4 +214,4 @@ Once trusted publishing is set up, you never touch PyPI manually again:
 You now have a fully automated PyPI publishing pipeline:
 - **No API tokens** — trusted publishing via OIDC
 - **No manual builds** — GitHub Actions builds and publishes on release tags
-- **Version-pinned skills** — your agent skills invoke `uvx resumebuilder-tools@1.0.0`, so they always get a known, tested engine version
+- **Version-pinned skills** — your agent skills invoke `uvx resumebuilder-tools@1.0.1`, so they always get a known, tested engine version
