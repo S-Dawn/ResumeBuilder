@@ -34,3 +34,6 @@ resumebuilder-skills.config.json
 .github/skills/openspec-*/
 .opencode/commands/opsx-*.md
 .opencode/skills/openspec-*/
+
+
+PUBLISH_TO_PYPI.md

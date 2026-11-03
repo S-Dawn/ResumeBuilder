@@ -51,6 +51,7 @@ MASTER_CONFLICT_ENTRY = re.compile(
 )
 REQUIRED_METADATA = ("id", "type", "title", "summary")
 MAX_RENDER_ATTEMPTS = 8
+CONFIG_FILENAME = "resumebuilder-skills.config.json"
 OPTIONAL_METADATA = (
     "employer",
     "role",
@@ -1122,36 +1123,36 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     index_parser = subparsers.add_parser("profile-index", help="Rebuild the profile metadata index.")
-    index_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    index_parser.add_argument("--profile-dir", type=Path)
     index_parser.add_argument("--output", type=Path, default=None)
 
     validate_parser = subparsers.add_parser("validate-profile", help="Validate profile records and IDs.")
-    validate_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    validate_parser.add_argument("--profile-dir", type=Path)
 
     stage_parser = subparsers.add_parser(
         "stage-profile-update",
         help="Validate a profile update candidate without modifying the canonical profile.",
     )
-    stage_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    stage_parser.add_argument("--profile-dir", type=Path)
     stage_parser.add_argument("--operations", required=True, type=Path)
 
     promote_parser = subparsers.add_parser(
         "promote-profile-update",
         help="Promote a validated profile update after explicit user approval.",
     )
-    promote_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    promote_parser.add_argument("--profile-dir", type=Path)
     promote_parser.add_argument("--stage-dir", required=True, type=Path)
 
     discard_parser = subparsers.add_parser(
         "discard-profile-update",
         help="Discard a staged profile update that the user did not approve.",
     )
-    discard_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
+    discard_parser.add_argument("--profile-dir", type=Path)
     discard_parser.add_argument("--stage-dir", required=True, type=Path)
 
     draft_parser = subparsers.add_parser("create-draft", help="Create an isolated application draft directory.")
     draft_parser.add_argument("--application", required=True, help="Application slug or descriptive label.")
-    draft_parser.add_argument("--output-root", type=Path, default=Path("generated"))
+    draft_parser.add_argument("--output-root", type=Path)
     draft_parser.add_argument(
         "--type",
         choices=("tailored", "master", "market"),
@@ -1166,15 +1167,59 @@ def build_parser() -> argparse.ArgumentParser:
 
     render_parser = subparsers.add_parser("render", help="Validate and render an application draft (tailored, master, or market).")
     render_parser.add_argument("--draft-dir", required=True, type=Path)
-    render_parser.add_argument("--profile-dir", type=Path, default=Path("profile"))
-    render_parser.add_argument("--generated-root", type=Path, default=Path("generated"))
+    render_parser.add_argument("--profile-dir", type=Path)
+    render_parser.add_argument("--generated-root", type=Path)
     render_parser.add_argument("--attempt", required=True, type=int)
     return parser
+
+
+def apply_project_paths(args: argparse.Namespace, working_directory: Path | None = None) -> None:
+    working_directory = (working_directory or Path.cwd()).resolve()
+    needs_profile = hasattr(args, "profile_dir") and args.profile_dir is None
+    needs_generated = any(
+        hasattr(args, argument) and getattr(args, argument) is None
+        for argument in ("output_root", "generated_root")
+    )
+    config_path = next(
+        (
+            directory / CONFIG_FILENAME
+            for directory in (working_directory, *working_directory.parents)
+            if (directory / CONFIG_FILENAME).is_file()
+        ),
+        None,
+    )
+    config_root = config_path.parent if config_path else working_directory
+    config: dict[str, Any] = {}
+    if config_path and (needs_profile or needs_generated):
+        try:
+            loaded_config = json.loads(config_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise WorkflowError(f"Unable to read {config_path}: {exc}") from exc
+        if not isinstance(loaded_config, dict):
+            raise WorkflowError(f"{config_path} must contain a JSON object.")
+        config = loaded_config
+
+    def configured_path(key: str, fallback: str) -> Path:
+        value = config.get(key, fallback)
+        if not isinstance(value, str) or not value.strip():
+            raise WorkflowError(f"{config_path or CONFIG_FILENAME}: '{key}' must be a non-empty path string.")
+        path = Path(value).expanduser()
+        return path if path.is_absolute() else config_root / path
+
+    if needs_profile:
+        args.profile_dir = configured_path("profile_dir", "profile")
+    if needs_generated:
+        generated_dir = configured_path("generated_dir", "generated")
+        if hasattr(args, "output_root") and args.output_root is None:
+            args.output_root = generated_dir
+        if hasattr(args, "generated_root") and args.generated_root is None:
+            args.generated_root = generated_dir
 
 
 def main() -> None:
     args = build_parser().parse_args()
     try:
+        apply_project_paths(args)
         if args.command == "profile-index":
             destination = write_index(args.profile_dir, args.output)
             print(destination)

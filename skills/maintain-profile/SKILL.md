@@ -7,11 +7,11 @@ compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engi
 
 # Maintain the career profile
 
-Update the canonical Markdown records in `profile/`. Use this skill for broader profile maintenance from a full resume or career facts the user provides, including project information present in a full resume. Do not edit the repository-root `resume.yaml` or application drafts under `generated/`.
+Update the canonical Markdown records under the configured `profile_dir`. Resolve it from `resumebuilder-skills.config.json` in the workspace or nearest parent directory, relative to the config file; if the config or key is absent, use `profile/`. The engine automatically applies configured profile and generated paths to CLI commands run from that workspace. Use this skill for broader profile maintenance from a full resume or career facts the user provides, including project information present in a full resume. Do not edit the repository-root `resume.yaml` or application drafts under the configured `generated_dir` (default: `generated/`).
 
 ## Read the shared contract
 
-Before proposing or applying profile edits, read `profile/README.md`. It is the canonical editing contract for record metadata, evidence IDs, source notes, privacy, and validation. Follow it if this skill's summary is incomplete.
+Before proposing or applying profile edits, read `<profile_dir>/README.md`. It is the canonical editing contract for record metadata, evidence IDs, source notes, privacy, and validation. Follow it if this skill's summary is incomplete.
 
 ## Source and privacy boundaries
 
@@ -27,7 +27,7 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 1. Build a temporary retrieval index without changing canonical files:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 profile-index --output <temporary-index-path>
+   uvx resumebuilder-tools@1.0.1 profile-index --output <temporary-index-path>
    ```
 
    Read relevant entries from that index, then open only matching Markdown records; expand retrieval when needed to verify chronology or claims. If indexing fails, report the error and stop.
@@ -61,8 +61,8 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 1. Stage the candidate without changing the canonical profile:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 stage-profile-update \
-     --profile-dir profile --operations <operations-json-path>
+   uvx resumebuilder-tools@1.0.1 stage-profile-update \
+     --operations <operations-json-path>
    ```
 
    The command validates the candidate, validates source-note references, generates a candidate index, and returns JSON containing `state`, `stage_dir`, `changed_paths`, and a unified `diff`. Continue only when `state` is `validated`. If staging fails, report the error and do not write canonical profile files.
@@ -70,18 +70,18 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 3. If the user declines or approval is unavailable, discard the staged candidate:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 discard-profile-update \
-     --profile-dir profile --stage-dir <stage_dir>
+   uvx resumebuilder-tools@1.0.1 discard-profile-update \
+     --stage-dir <stage_dir>
    ```
 
    Then confirm that canonical records were not changed.
 4. Only after explicit approval, promote that exact staged candidate:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 promote-profile-update \
-     --profile-dir profile --stage-dir <stage_dir>
+   uvx resumebuilder-tools@1.0.1 promote-profile-update \
+     --stage-dir <stage_dir>
    ```
 
    The helper checks affected record contents and profile-wide evidence-ID/index dependencies, revalidates the candidate and index, and promotes with backups/rollback on ordinary write failures. Unrelated files and unrelated claim wording changes do not invalidate the preview. If relevant state changed after preview, rebuild the candidate, show the refreshed diff, and ask for approval again. Do not reapply the old approval.
-5. Report the promotion result and run `uvx resumebuilder-tools@1.0.0 validate-profile` as a post-promotion check. If promotion, rollback, or validation fails, report the exact error and affected paths; if rollback fails, retain and report the recovery-backup directory. Never claim success. Multi-file promotion is not crash-atomic.
+5. Report the promotion result and run `uvx resumebuilder-tools@1.0.1 validate-profile` as a post-promotion check. If promotion, rollback, or validation fails, report the exact error and affected paths; if rollback fails, retain and report the recovery-backup directory. Never claim success. Multi-file promotion is not crash-atomic.
 6. Remove the temporary operations JSON after staging. Promotion removes the staging directory on success; discard it on decline. Do not copy temporary inputs or source documents into the repository.

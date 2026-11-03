@@ -7,7 +7,7 @@ compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engi
 
 # Analyze profile fit
 
-Assess how well the canonical career profile in `profile/` documents a user's fit for a job. This is a standalone diagnostic: do not create or edit a resume, application draft, profile record, or retained report.
+Assess how well the canonical career profile documents a user's fit for a job. Resolve `profile_dir` from `resumebuilder-skills.config.json` in the workspace or nearest parent directory, relative to the config file; if the config or key is absent, use `profile/`. The engine automatically applies this path to CLI commands run from that workspace. This is a standalone diagnostic: do not create or edit a resume, application draft, profile record, or retained report.
 
 ## Inputs, privacy, and trust boundaries
 
@@ -20,14 +20,14 @@ Assess how well the canonical career profile in `profile/` documents a user's fi
 
 ## Retrieve profile evidence on demand
 
-1. Build a fresh compact index at a temporary path outside the repository, without overwriting `profile/index.yaml`:
+1. Build a fresh compact index at a temporary path outside the repository, without overwriting the configured profile's `index.yaml`:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 profile-index --output <temporary-index-path>
+   uvx resumebuilder-tools@1.0.1 profile-index --output <temporary-index-path>
    ```
 
    Read the generated temporary index. Remove the temporary index after analysis.
-2. Compare the job description's qualifications with index summaries, metadata, skills, domains, tags, and aliases to identify candidate records.
+2. Compare the job description's qualifications with index summaries, metadata, skills, domains, tags, and aliases to identify candidate records under the configured profile directory.
 3. Read only candidate Markdown records needed to assess requirements. Expand retrieval when summaries or selected records do not provide enough context; do not impose an arbitrary record-count cap.
 4. Use stable evidence IDs from record bullets when citing support. Verify every cited ID against the candidate records. Do not treat metadata or keyword overlap alone as proof of experience; use it to find evidence.
 5. If relevant claims conflict, do not resolve the conflict by guessing. Identify the conflicting evidence IDs and qualify the affected assessment; ask the user for clarification if it materially changes the result.

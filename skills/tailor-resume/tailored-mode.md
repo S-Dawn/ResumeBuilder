@@ -46,7 +46,7 @@ See [rendering.md](rendering.md).
 For a tailored draft:
 
 ```sh
-uvx resumebuilder-tools@1.0.0 create-draft --application <company-role-slug>
+uvx resumebuilder-tools@1.0.1 create-draft --application <company-role-slug>
 ```
 
 Write `resume.yaml`, `source-map.json`, and `fit-report.md` in the returned directory. Do not write the job description there.

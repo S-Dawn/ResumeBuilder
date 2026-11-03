@@ -7,7 +7,7 @@ compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engi
 
 # Tailor a resume
 
-Create either a focused application draft, a consolidated master resume, or a market-oriented resume from the canonical profile in `profile/`.
+Create either a focused application draft, a consolidated master resume, or a market-oriented resume from the canonical profile. Resolve `profile_dir` from `resumebuilder-skills.config.json` in the workspace or nearest parent directory, relative to the config file; if the config or key is absent, use `profile/`. The engine automatically applies configured profile and generated paths for CLI commands run from that workspace.
 Never modify the profile or repository-root `resume.yaml`.
 
 ## Modes
@@ -28,7 +28,7 @@ Choose the mode that matches your goal:
 
 ## Build context on demand (all modes)
 
-1. Run `uvx resumebuilder-tools@1.0.0 profile-index` and read only `profile/index.yaml`.
+1. Run `uvx resumebuilder-tools@1.0.1 profile-index` and read only `<profile_dir>/index.yaml`.
 2. Use record summaries, metadata, tags, aliases, and the job description (if any) to identify candidate records.
 3. Read only the candidate Markdown records. Expand the set when needed to establish accurate dates, responsibilities, or evidence; do not impose an arbitrary record-count cap.
 4. Use stable evidence IDs from the record bullets in every source mapping. If relevant source claims conflict, omit the disputed claim and report the conflicting IDs for user clarification.

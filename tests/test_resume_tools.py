@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import io
 import json
 import os
@@ -12,8 +13,8 @@ from unittest.mock import patch
 import yaml
 from pypdf import PdfWriter
 
-import resume_tools
-from ResumeBuilder import build_html, validate_pdf_output
+from python_engine import resume_tools
+from python_engine.ResumeBuilder import build_html, validate_pdf_output
 from weasyprint import HTML
 
 
@@ -91,6 +92,128 @@ def write_draft_files(draft_dir: Path, profile_dir: Path, resume: dict | None = 
         "- None identified\n",
         encoding="utf-8",
     )
+
+
+class ProjectPathConfigTests(unittest.TestCase):
+    def test_profile_index_command_uses_configured_profile_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            project = Path(temporary_directory)
+            profile_dir = project / "career"
+            write_profile(profile_dir)
+            (project / "resumebuilder-skills.config.json").write_text(
+                json.dumps({"profile_dir": "career"}),
+                encoding="utf-8",
+            )
+            previous_directory = Path.cwd()
+            try:
+                os.chdir(project)
+                with (
+                    patch("sys.argv", ["resumebuilder-tools", "profile-index"]),
+                    patch("sys.stdout", io.StringIO()),
+                ):
+                    resume_tools.main()
+            finally:
+                os.chdir(previous_directory)
+
+            self.assertTrue((profile_dir / "index.yaml").is_file())
+
+    def test_create_draft_command_uses_configured_generated_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            project = Path(temporary_directory)
+            generated_dir = project / "resume-output"
+            (project / "resumebuilder-skills.config.json").write_text(
+                json.dumps({"generated_dir": "resume-output"}),
+                encoding="utf-8",
+            )
+            previous_directory = Path.cwd()
+            try:
+                os.chdir(project)
+                with (
+                    patch("sys.argv", ["resumebuilder-tools", "create-draft", "--application", "Example Co"]),
+                    patch("sys.stdout", io.StringIO()),
+                ):
+                    resume_tools.main()
+            finally:
+                os.chdir(previous_directory)
+
+            self.assertTrue((generated_dir / "example-co").is_dir())
+
+    def test_configured_paths_are_resolved_from_config_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            project = Path(temporary_directory)
+            nested_directory = project / "workspace"
+            nested_directory.mkdir()
+            (project / "resumebuilder-skills.config.json").write_text(
+                json.dumps({"profile_dir": "career/profile", "generated_dir": "output/resumes"}),
+                encoding="utf-8",
+            )
+            args = argparse.Namespace(profile_dir=None, output_root=None, generated_root=None)
+
+            resume_tools.apply_project_paths(args, nested_directory)
+
+        self.assertEqual(args.profile_dir, project / "career/profile")
+        self.assertEqual(args.output_root, project / "output/resumes")
+        self.assertEqual(args.generated_root, project / "output/resumes")
+
+    def test_explicit_cli_paths_override_configured_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            project = Path(temporary_directory)
+            (project / "resumebuilder-skills.config.json").write_text(
+                json.dumps({"profile_dir": "career", "generated_dir": "output"}),
+                encoding="utf-8",
+            )
+            explicit_profile = Path("other-profile")
+            explicit_output = Path("other-output")
+            args = argparse.Namespace(
+                profile_dir=explicit_profile,
+                output_root=explicit_output,
+                generated_root=None,
+            )
+
+            resume_tools.apply_project_paths(args, project)
+
+        self.assertEqual(args.profile_dir, explicit_profile)
+        self.assertEqual(args.output_root, explicit_output)
+        self.assertEqual(args.generated_root, project / "output")
+
+    def test_explicit_cli_paths_do_not_depend_on_config_contents(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            project = Path(temporary_directory)
+            (project / "resumebuilder-skills.config.json").write_text(
+                json.dumps({"profile_dir": ""}),
+                encoding="utf-8",
+            )
+            explicit_profile = Path("other-profile")
+            args = argparse.Namespace(profile_dir=explicit_profile)
+
+            resume_tools.apply_project_paths(args, project)
+
+        self.assertEqual(args.profile_dir, explicit_profile)
+
+    def test_default_paths_remain_relative_to_working_directory_without_config(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            working_directory = Path(temporary_directory)
+            args = argparse.Namespace(profile_dir=None, output_root=None, generated_root=None)
+
+            resume_tools.apply_project_paths(args, working_directory)
+
+        self.assertEqual(args.profile_dir, working_directory / "profile")
+        self.assertEqual(args.output_root, working_directory / "generated")
+        self.assertEqual(args.generated_root, working_directory / "generated")
+
+    def test_invalid_config_path_is_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            project = Path(temporary_directory)
+            (project / "resumebuilder-skills.config.json").write_text(
+                json.dumps({"profile_dir": ""}),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(resume_tools.WorkflowError, "'profile_dir'"):
+                resume_tools.apply_project_paths(
+                    argparse.Namespace(profile_dir=None),
+                    project,
+                )
 
 
 class ProfileTests(unittest.TestCase):

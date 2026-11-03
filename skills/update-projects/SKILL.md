@@ -7,11 +7,11 @@ compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engi
 
 # Update project records
 
-Use this skill for focused changes to a project record in the canonical profile under `profile/projects/`, including corresponding updates to `profile/skills.md` when the project provides new evidence of the user's skills. Full-resume ingestion across record types belongs to `maintain-profile`. Do not edit the repository-root `resume.yaml` or application drafts under `generated/`.
+Use this skill for focused changes to a project record under `<profile_dir>/projects/`, including corresponding updates to `<profile_dir>/skills.md` when the project provides new evidence of the user's skills. Resolve `profile_dir` from `resumebuilder-skills.config.json` in the workspace or nearest parent directory, relative to the config file; if the config or key is absent, use `profile/`. The engine automatically applies configured profile and generated paths to CLI commands run from that workspace. Full-resume ingestion across record types belongs to `maintain-profile`. Do not edit the repository-root `resume.yaml` or application drafts under the configured `generated_dir` (default: `generated/`).
 
 ## Read the shared contract
 
-Before proposing or applying profile edits, read `profile/README.md`. It is the canonical editing contract for record metadata, evidence IDs, source notes, privacy, and validation. Follow it if this skill's summary is incomplete.
+Before proposing or applying profile edits, read `<profile_dir>/README.md`. It is the canonical editing contract for record metadata, evidence IDs, source notes, privacy, and validation. Follow it if this skill's summary is incomplete.
 
 ## Sources and trust boundaries
 
@@ -27,12 +27,12 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 1. Build a temporary retrieval index without changing canonical files:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 profile-index --output <temporary-index-path>
+   uvx resumebuilder-tools@1.0.1 profile-index --output <temporary-index-path>
    ```
 
-   Read the relevant entries and candidate project Markdown record, plus the skills entry and `profile/skills.md`. If no project record matches, prepare a new record using `profile/README.md`'s frontmatter format. If indexing fails, report the error and stop.
+   Read the relevant entries and candidate project Markdown record, plus the skills entry and `<profile_dir>/skills.md`. If no project record matches, prepare a new record using `<profile_dir>/README.md`'s frontmatter format. If indexing fails, report the error and stop.
 2. If the target project is ambiguous, ask the user before editing. Preserve unrelated projects and claims.
-3. Include only supported facts. Ask about conflicts in dates, scope, technologies, metrics, personal contribution, or outcomes instead of guessing. Compare the project facts with `profile/skills.md`; when they support a new skill claim, update that record in the same batch by adding missing skills to its frontmatter `skills` list and adding traceable evidence under `## Evidence`. A technology used by a project is not, by itself, evidence of the user's skill: establish the user's own contribution or experience from user-provided facts or relevant canonical evidence, and ask if unclear. Preserve the skills record unchanged when no new or materially changed skill claim is supported.
+3. Include only supported facts. Ask about conflicts in dates, scope, technologies, metrics, personal contribution, or outcomes instead of guessing. Compare the project facts with `<profile_dir>/skills.md`; when they support a new skill claim, update that record in the same batch by adding missing skills to its frontmatter `skills` list and adding traceable evidence under `## Evidence`. A technology used by a project is not, by itself, evidence of the user's skill: establish the user's own contribution or experience from user-provided facts or relevant canonical evidence, and ask if unclear. Preserve the skills record unchanged when no new or materially changed skill claim is supported.
 4. Preserve an evidence ID when wording changes but the factual meaning does not. For a materially changed assertion, propose a new unique ID and replace the old claim in the same diff. Use a new unique ID for each newly added claim.
 5. Do not delete claims or records unless the user explicitly requests deletion; include the removal in the diff and obtain approval.
 6. Add a `## Source notes` section for new or materially changed claims only. Use a keyed, non-bullet line:
@@ -61,8 +61,8 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 1. Stage the candidate without changing the canonical profile:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 stage-profile-update \
-     --profile-dir profile --operations <operations-json-path>
+   uvx resumebuilder-tools@1.0.1 stage-profile-update \
+     --operations <operations-json-path>
    ```
 
    Continue only when the returned JSON reports `state: "validated"`. It includes the stage directory, affected paths, and unified diff. Staging validates profile records/source-note references and creates a candidate index. If validation fails, report the error and do not edit canonical files.
@@ -70,16 +70,16 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 3. If the user declines or approval is unavailable, discard the stage:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 discard-profile-update \
-     --profile-dir profile --stage-dir <stage_dir>
+   uvx resumebuilder-tools@1.0.1 discard-profile-update \
+     --stage-dir <stage_dir>
    ```
 4. After explicit approval, promote the staged candidate:
 
    ```sh
-   uvx resumebuilder-tools@1.0.0 promote-profile-update \
-     --profile-dir profile --stage-dir <stage_dir>
+   uvx resumebuilder-tools@1.0.1 promote-profile-update \
+     --stage-dir <stage_dir>
    ```
 
    The helper rejects stale affected-record or profile-wide evidence-ID/index state, revalidates the staged candidate/index, and uses backups with rollback on ordinary promotion errors. Unrelated files and unrelated claim wording changes do not invalidate the preview. If relevant profile state changed after preview, regenerate and validate the candidate, show the new diff, and request approval again. Never use stale approval.
-5. Report promotion and run `uvx resumebuilder-tools@1.0.0 validate-profile` after success. Report validation, promotion, or rollback errors and affected paths explicitly; if rollback fails, retain and report the recovery-backup directory. Multi-file promotion is not crash-atomic.
+5. Report promotion and run `uvx resumebuilder-tools@1.0.1 validate-profile` after success. Report validation, promotion, or rollback errors and affected paths explicitly; if rollback fails, retain and report the recovery-backup directory. Multi-file promotion is not crash-atomic.
 6. Remove the temporary operations JSON after staging. On success the helper removes the stage; discard it on decline. Never retain source documents in the repository.

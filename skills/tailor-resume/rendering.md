@@ -24,19 +24,19 @@ Include one entry for every non-empty string value in `resume.yaml`; paths use d
 For a tailored draft:
 
 ```sh
-uvx resumebuilder-tools@1.0.0 create-draft --application <company-role-slug>
+uvx resumebuilder-tools@1.0.1 create-draft --application <company-role-slug>
 ```
 
 For a master resume:
 
 ```sh
-uvx resumebuilder-tools@1.0.0 create-draft --application master-resume --type master
+uvx resumebuilder-tools@1.0.1 create-draft --application master-resume --type master
 ```
 
 For a market resume:
 
 ```sh
-uvx resumebuilder-tools@1.0.0 create-draft --application market-resume --type market
+uvx resumebuilder-tools@1.0.1 create-draft --application market-resume --type market
 ```
 
 If a directory already exists, ask whether to create a numbered draft, explicitly replace it, or cancel. Use `--collision new` only after the user chooses a numbered draft and `--collision replace` only after explicit replacement authorization. If interaction is unavailable, cancel; never silently overwrite.
@@ -46,10 +46,10 @@ If a directory already exists, ask whether to create a numbered draft, explicitl
 Invoke the helper for the initial render:
 
 ```sh
-uvx resumebuilder-tools@1.0.0 render --draft-dir <draft-directory> --attempt 1
+uvx resumebuilder-tools@1.0.1 render --draft-dir <draft-directory> --attempt 1
 ```
 
-The render command accepts only a direct child of `generated/`; do not pass another output root unless it is explicitly configured with `--generated-root`.
+The render command accepts only a direct child of the configured `generated_dir` (default: `generated/`); the engine applies this path automatically from `resumebuilder-skills.config.json`.
 
 ## Word count
 
