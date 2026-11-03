@@ -9,10 +9,10 @@
 
 ## 2. Publish engine to PyPI via GitHub Actions trusted publishing
 
-- [ ] 2.1 Configure PyPI trusted publishing for `resumebuilder-tools` project name
+- [x] 2.1 Configure PyPI trusted publishing for `resumebuilder-tools` project name
 - [x] 2.2 Add PyPI publish job to `.github/workflows/release.yml` using `uv publish` with trusted publishing (OIDC), triggered on release tag
-- [ ] 2.3 Publish initial version `1.0.0` of `resumebuilder-tools` to PyPI via the release workflow
-- [ ] 2.4 Confirm package is installable: `uvx resumebuilder-tools@1.0.0 --help`
+- [x] 2.3 Publish initial version `1.0.0` of `resumebuilder-tools` to PyPI via the release workflow
+- [x] 2.4 Confirm package is installable: `uvx resumebuilder-tools@1.0.0 --help`
 
 ## 3. Update skills to invoke engine via uvx
 
