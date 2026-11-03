@@ -2,6 +2,7 @@
 name: analyze-profile-fit
 description: Compare the canonical profile with a job description and report evidence-backed fit, gaps, and improvement opportunities without creating a resume.
 disable-model-invocation: true
+compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engine package from PyPI.
 ---
 
 # Analyze profile fit
@@ -22,7 +23,7 @@ Assess how well the canonical career profile in `profile/` documents a user's fi
 1. Build a fresh compact index at a temporary path outside the repository, without overwriting `profile/index.yaml`:
 
    ```sh
-   poetry run python resume_tools.py profile-index --output <temporary-index-path>
+   uvx resumebuilder-tools@1.0.0 profile-index --output <temporary-index-path>
    ```
 
    Read the generated temporary index. Remove the temporary index after analysis.

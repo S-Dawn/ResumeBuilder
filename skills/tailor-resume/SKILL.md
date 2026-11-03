@@ -2,6 +2,7 @@
 name: tailor-resume
 description: Create a job-tailored resume from a job description or a complete master resume when no job description is supplied, preserving source traceability and requiring human review.
 disable-model-invocation: true
+compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engine package from PyPI.
 ---
 
 # Tailor a resume
@@ -27,7 +28,7 @@ Choose the mode that matches your goal:
 
 ## Build context on demand (all modes)
 
-1. Run `poetry run python resume_tools.py profile-index` and read only `profile/index.yaml`.
+1. Run `uvx resumebuilder-tools@1.0.0 profile-index` and read only `profile/index.yaml`.
 2. Use record summaries, metadata, tags, aliases, and the job description (if any) to identify candidate records.
 3. Read only the candidate Markdown records. Expand the set when needed to establish accurate dates, responsibilities, or evidence; do not impose an arbitrary record-count cap.
 4. Use stable evidence IDs from the record bullets in every source mapping. If relevant source claims conflict, omit the disputed claim and report the conflicting IDs for user clarification.

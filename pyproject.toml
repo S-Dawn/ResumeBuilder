@@ -1,22 +1,26 @@
-[tool.poetry]
-name = "resume-builder"
-version = "0.1.0"
-description = "Profile-driven ATS-friendly resume generator with WeasyPrint validation"
-authors = ["Subham Dawn <coder.sdawn@gmail.com>"]
+[project]
+name = "resumebuilder-tools"
+version = "1.0.0"
+description = "Profile-driven ATS-friendly resume generator engine for ResumeBuilder agent skills."
 readme = "README.md"
-license = "MIT"
-repository = "https://github.com/S-Dawn/ResumeBuilder"
-keywords = ["resume", "pdf", "weasyprint", "yaml", "cv"]
-package-mode = false
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Subham Dawn", email = "coder.sdawn@gmail.com" }]
+keywords = ["resume", "pdf", "weasyprint", "yaml", "cv", "ats"]
+dependencies = [
+    "weasyprint>=70.0,<71.0",
+    "pydyf>=0.10,<0.12",
+    "pypdf>=6.21.3,<7.0",
+    "pillow>=13.0,<14.0",
+    "pyyaml>=6.0.2,<7.0",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<4.0"
-weasyprint = "^70.0"
-pydyf = ">=0.10,<0.12"
-pyyaml = "^6.0.2"
-pypdf = "^6.21.3"
-pillow = "^13.0"
+[project.scripts]
+resumebuilder-tools = "python_engine.resume_tools:main"
 
 [build-system]
-requires = ["poetry-core>=1.9.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling>=1.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["python_engine"]

@@ -2,6 +2,7 @@
 name: update-projects
 description: Refine an existing project in the canonical career profile or add a new project with traceable evidence and explicit approval.
 disable-model-invocation: true
+compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engine package from PyPI.
 ---
 
 # Update project records
@@ -26,7 +27,7 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 1. Build a temporary retrieval index without changing canonical files:
 
    ```sh
-   poetry run python resume_tools.py profile-index --output <temporary-index-path>
+   uvx resumebuilder-tools@1.0.0 profile-index --output <temporary-index-path>
    ```
 
    Read the relevant entries and candidate project Markdown record, plus the skills entry and `profile/skills.md`. If no project record matches, prepare a new record using `profile/README.md`'s frontmatter format. If indexing fails, report the error and stop.
@@ -60,7 +61,7 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 1. Stage the candidate without changing the canonical profile:
 
    ```sh
-   poetry run python resume_tools.py stage-profile-update \
+   uvx resumebuilder-tools@1.0.0 stage-profile-update \
      --profile-dir profile --operations <operations-json-path>
    ```
 
@@ -69,16 +70,16 @@ Before proposing or applying profile edits, read `profile/README.md`. It is the 
 3. If the user declines or approval is unavailable, discard the stage:
 
    ```sh
-   poetry run python resume_tools.py discard-profile-update \
+   uvx resumebuilder-tools@1.0.0 discard-profile-update \
      --profile-dir profile --stage-dir <stage_dir>
    ```
 4. After explicit approval, promote the staged candidate:
 
    ```sh
-   poetry run python resume_tools.py promote-profile-update \
+   uvx resumebuilder-tools@1.0.0 promote-profile-update \
      --profile-dir profile --stage-dir <stage_dir>
    ```
 
    The helper rejects stale affected-record or profile-wide evidence-ID/index state, revalidates the staged candidate/index, and uses backups with rollback on ordinary promotion errors. Unrelated files and unrelated claim wording changes do not invalidate the preview. If relevant profile state changed after preview, regenerate and validate the candidate, show the new diff, and request approval again. Never use stale approval.
-5. Report promotion and run `poetry run python resume_tools.py validate-profile` after success. Report validation, promotion, or rollback errors and affected paths explicitly; if rollback fails, retain and report the recovery-backup directory. Multi-file promotion is not crash-atomic.
+5. Report promotion and run `uvx resumebuilder-tools@1.0.0 validate-profile` after success. Report validation, promotion, or rollback errors and affected paths explicitly; if rollback fails, retain and report the recovery-backup directory. Multi-file promotion is not crash-atomic.
 6. Remove the temporary operations JSON after staging. On success the helper removes the stage; discard it on decline. Never retain source documents in the repository.

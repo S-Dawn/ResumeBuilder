@@ -19,7 +19,7 @@ from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 from weasyprint import HTML
 
-from ResumeBuilder import build_html, load_resume_data, validate_pdf_output
+from .ResumeBuilder import build_html, load_resume_data, validate_pdf_output
 
 RECORD_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 EVIDENCE_LINE = re.compile(
