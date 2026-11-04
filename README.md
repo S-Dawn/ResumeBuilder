@@ -45,6 +45,53 @@ Set up ResumeBuilder once in each project where you plan to use it:
 
 The setup skill is a per-project configuration step, not a profile editor. Run it before using the other ResumeBuilder skills.
 
+## Invocation architecture (client side)
+
+ResumeBuilder skills are installed into your chosen agent runtime and invoked explicitly by you. The agent follows the selected skill's instructions, uses the Python engine for profile and resume operations, then presents the result for your review.
+
+```mermaid
+flowchart TD
+    U[User] -->|Installs skills| R[Agent runtime<br/>Claude Code, Codex, OpenCode, GitHub Copilot, etc.]
+    U -->|Explicitly invokes a skill| R
+    R -->|Loads selected SKILL.md| G{Setup or task skill?}
+
+    G -->|Setup, once per project| S[setup-resumebuilder-skills]
+    S -->|Prompts for profile, output, and validation paths| C[resumebuilder-skills.config.json]
+    S -->|Checks engine availability and profile| SE[Python engine via uvx]
+    SE -->|Confirms setup| S
+
+    G -->|Profile and resume tasks| W{Selected task skill}
+    W -->|Maintain career profile| M[maintain-profile]
+    W -->|Update project evidence| P[update-projects]
+    W -->|Assess job fit| A[analyze-profile-fit]
+    W -->|Create resume draft| T[tailor-resume]
+
+    M -->|Prepare proposed profile update| STAGE[Stage and validate via engine]
+    P -->|Prepare project update| STAGE
+    STAGE --> DIFF[Skill presents complete diff]
+    DIFF --> AP{User approves exact diff?}
+    AP -->|Yes| PROM[Promote approved changes via engine]
+    AP -->|No| DISC[Discard staged changes via engine]
+    PROM --> OUT[Result returned to user]
+    DISC --> OUT
+
+    A -->|Build temporary profile index| IDX[Profile index via engine]
+    IDX --> FIT[Agent assesses evidence against job description]
+    FIT --> OUT
+
+    T -->|Select relevant profile evidence| PREP[Agent prepares resume content and source map]
+    PREP -->|Create, render, and validate| RENDER[Draft engine via uvx]
+    RENDER -->|Resume files and reports| REV[User reviews draft]
+    REV --> OUT
+
+    C -.->|Configured paths, if present| SE
+    C -.->|Configured paths, if present| STAGE
+    C -.->|Configured paths, if present| IDX
+    C -.->|Configured paths, if present| RENDER
+```
+
+The setup step is per project. Task skills can use default `profile/` and `generated/` paths when no configuration file is present. Profile updates are staged and applied only after your explicit approval; fit analysis does not save a report, and resume drafts are presented for your review rather than submitted.
+
 ## ResumeBuilder skills
 
 Invoke these skills by name in your agent:
