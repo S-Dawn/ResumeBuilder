@@ -40,7 +40,7 @@ and note the conflict for user clarification.
 For a master resume, use the stable label `master-resume` and select master mode:
 
 ```sh
-uvx resumebuilder-tools@1.0.1 create-draft --application master-resume --type master
+./scripts/resume-tools create-draft --application master-resume --type master
 ```
 
 Write `resume.yaml`, `source-map.json`, and `master-report.md` in the returned directory.

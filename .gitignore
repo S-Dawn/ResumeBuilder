@@ -26,7 +26,7 @@ generated/
 profile/*
 
 # ResumeBuilder skills local config
-resumebuilder-skills.config.json
+resumebuilder-skills.config*.json
 
 # OpenSpec-generated agent integrations
 .codex/skills/openspec-*/

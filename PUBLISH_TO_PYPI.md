@@ -158,7 +158,7 @@ On your local machine (or any machine with `uv` installed):
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Verify
-uvx resumebuilder-tools@1.0.1 --help
+uvx resumebuilder-tools@1.0.2 --help
 ```
 
 You should see the CLI help with all subcommands:
@@ -186,14 +186,75 @@ Once trusted publishing is set up, you never touch PyPI manually again:
 
 ---
 
+## Local development (no publish required)
+
+While iterating on new features or scripts, developers can run the unpackaged
+local `python_engine/` code instead of the published PyPI package. This avoids
+a full release cycle for every change.
+
+### Prerequisites
+
+- `uv` installed (same as production)
+- A gitignored `resumebuilder-skills.config.json` at the repo root (or nearest
+  parent) with `profile_dir` and `generated_dir`:
+
+  ```json
+  {
+    "profile_dir": "profile",
+    "generated_dir": "generated"
+  }
+  ```
+
+### Run the engine locally
+
+```bash
+RESUMEBUILDER_TOOLS_MODE=dev ./scripts/resume-tools <subcommand> [args]
+```
+
+Examples:
+
+```bash
+RESUMEBUILDER_TOOLS_MODE=dev ./scripts/resume-tools validate-profile --profile-dir profile
+RESUMEBUILDER_TOOLS_MODE=dev ./scripts/resume-tools profile-index --output /tmp/index.yaml
+```
+
+`RESUMEBUILDER_TOOLS_MODE=dev` resolves to `uv run -m python_engine.resume_tools`,
+so edits to `python_engine/` take effect immediately — no rebuild, no publish,
+no version bump. Any subcommand works: `profile-index`, `validate-profile`,
+`stage-profile-update`, `promote-profile-update`, `discard-profile-update`,
+`create-draft`, `render`.
+
+When done, unset the variable (or set it to `production`) to fall back to the
+version-pinned published package via `uvx`:
+
+```bash
+./scripts/resume-tools validate-profile --profile-dir profile
+```
+
+### Abstraction layer
+
+Skills no longer reference `uvx` directly. They invoke
+`./scripts/resume-tools`, which is a thin wrapper that selects local vs.
+published mode at runtime via `RESUMEBUILDER_TOOLS_MODE`. Executable skills
+can import the shared helper `python_engine.cli_invoke` instead of shelling
+out to `uvx` directly:
+
+```python
+from python_engine.cli_invoke import run
+
+run("validate-profile", "--profile-dir", profile_dir)
+```
+
+---
+
 ## Troubleshooting
 
 | Problem | Likely cause | Fix |
 |---------|-------------|-----|
 | Workflow fails: "no trusted publisher found" | Trusted publisher not added on PyPI, or workflow name mismatch | Double-check Step 3a; workflow filename must be exactly `release.yml` |
 | Workflow fails: "project name not found" | Project `resumebuilder-tools` not created on PyPI | Complete Step 2 |
-| `uvx resumebuilder-tools@1.0.1 --help` says package not found | Publish hasn't finished, or version mismatch | Wait for the workflow to complete; check https://pypi.org/project/resumebuilder-tools/ |
-| ImportError when running locally | Running `resume_tools.py` directly instead of as a module | Use `uv run -m python_engine.resume_tools <command>` or `uvx resumebuilder-tools@1.0.1 <command>` |
+| `uvx resumebuilder-tools@1.0.2 --help` says package not found | Publish hasn't finished, or version mismatch | Wait for the workflow to complete; check https://pypi.org/project/resumebuilder-tools/ |
+| ImportError when running locally | Running `resume_tools.py` directly instead of as a module | Use `RESUMEBUILDER_TOOLS_MODE=dev ./scripts/resume-tools <command>` or `uv run -m python_engine.resume_tools <command>` |
 
 ---
 
@@ -214,4 +275,4 @@ Once trusted publishing is set up, you never touch PyPI manually again:
 You now have a fully automated PyPI publishing pipeline:
 - **No API tokens** — trusted publishing via OIDC
 - **No manual builds** — GitHub Actions builds and publishes on release tags
-- **Version-pinned skills** — your agent skills invoke `uvx resumebuilder-tools@1.0.1`, so they always get a known, tested engine version
+- **Version-pinned skills** — skills invoke `./scripts/resume-tools`, which runs the latest published package (`uvx resumebuilder-tools@latest`) by default; set `RESUMEBUILDER_TOOLS_MODE=dev` to run unpackaged local code instead

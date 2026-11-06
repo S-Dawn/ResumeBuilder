@@ -59,7 +59,7 @@ Or `- None identified` when a section has no entries.
 For a market resume, use the stable label `market-resume` and select market mode:
 
 ```sh
-uvx resumebuilder-tools@1.0.1 create-draft --application market-resume --type market
+./scripts/resume-tools create-draft --application market-resume --type market
 ```
 
 Write `resume.yaml`, `source-map.json`, and `market-report.md` in the returned directory. Do not write the job description there.
