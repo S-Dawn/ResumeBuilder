@@ -221,6 +221,59 @@ When developing new skill features or testing changes to `python_engine/`, run s
 | `resumebuilder-skills.config.json` | Local dev config (gitignored): `profile_dir`, `generated_dir` |
 | `.agents/install-block.md` | Canonical install instructions per agent runtime |
 
+## Releasing the Python engine to PyPI
+
+The Python engine is published to [PyPI](https://pypi.org/project/resumebuilder-tools/) by the `publish-python` job in [`.github/workflows/release.yml`](.github/workflows/release.yml). Publishing uses PyPI trusted publishing (OIDC); no PyPI API token is needed. The workflow runs this job when a GitHub Release is **published**. Pushing a tag alone does not publish the package.
+
+For the first-time PyPI project and trusted-publisher setup, follow the detailed [PyPI publishing guide](PUBLISH_TO_PYPI.md). For routine releases:
+
+1. Make and test the engine changes. Update the version in `pyproject.toml` to a new version that has not already been published to PyPI, then run:
+
+   ```bash
+   uv lock
+   uv run python -m unittest discover -s tests
+   uv build
+   ```
+
+2. Commit and push the release commit to `main`:
+
+   ```bash
+   git add pyproject.toml uv.lock python_engine tests skills README.md
+   git commit -m "chore: prepare resumebuilder-tools vX.Y.Z release"
+   git push origin main
+   ```
+
+   Replace `X.Y.Z` with the exact version in `pyproject.toml`. Check that no tag with the version already exists:
+
+   ```bash
+   git ls-remote --tags origin "refs/tags/vX.Y.Z"
+   ```
+
+3. Create and push a tag using the same version, pointing at the release commit:
+
+   ```bash
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+4. In GitHub, open **Releases → Draft a new release**. Select the existing `vX.Y.Z` tag and target `main`. Use this title convention:
+
+   ```text
+   resumebuilder-tools vX.Y.Z
+   ```
+
+   Add concise release notes describing the engine changes. Leave **Pre-release** unchecked and select **Latest** for the current production release. Leave binaries empty. Click **Publish release**. This `release.published` event triggers the PyPI workflow.
+
+5. In **Actions**, confirm the **Publish Python engine to PyPI** job succeeds. Then verify that PyPI lists the new version and run:
+
+   ```bash
+   uvx resumebuilder-tools@X.Y.Z --help
+   ```
+
+   Replace `X.Y.Z` with the release version.
+
+Do not reuse a version already published to PyPI: PyPI releases are immutable. If a tag exists but has not been published, check its target and the package version before creating the release. Do not force-move an existing tag without confirming it is unpublished and the target commit is correct.
+
 ## Contributing
 
 For a substantial change, open an issue first to discuss the behavior or approach. For a pull request:
