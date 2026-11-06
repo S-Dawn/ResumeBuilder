@@ -1,6 +1,6 @@
 [project]
 name = "resumebuilder-tools"
-version = "1.0.1"
+version = "1.0.2"
 description = "Profile-driven ATS-friendly resume generator engine for ResumeBuilder agent skills."
 readme = "README.md"
 requires-python = ">=3.11"

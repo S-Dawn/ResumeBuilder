@@ -50,7 +50,7 @@ validation tools.
    (e.g., `pip install uv` or `brew install uv`) before proceeding.
 1. Prompts you for each configuration value, with sensible defaults.
 2. Writes `resumebuilder-skills.config.json` next to the repo root.
-3. Confirms that `uvx resumebuilder-tools@1.0.1 profile-index` works
+3. Confirms that `./scripts/resume-tools profile-index` works
    against your configured profile directory.
 4. Tells you which skills are now available: `/tailor-resume`,
    `/maintain-profile`, `/analyze-profile-fit`, `/update-projects`.
@@ -60,6 +60,6 @@ validation tools.
 - `uv`/`uvx` is installed (or you installed it after the setup prompt).
 - `resumebuilder-skills.config.json` exists at the repo root with your
   chosen values.
-- `uvx resumebuilder-tools@1.0.1 profile-index` exits successfully.
+- `./scripts/resume-tools profile-index` exits successfully.
 - Running `/tailor-resume`, `/maintain-profile`, `/analyze-profile-fit`, or
   `/update-projects` reads the config and operates on your profile.

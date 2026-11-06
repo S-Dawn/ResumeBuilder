@@ -27,7 +27,7 @@ Before proposing or applying profile edits, read `<profile_dir>/README.md`. It i
 1. Build a temporary retrieval index without changing canonical files:
 
    ```sh
-   uvx resumebuilder-tools@1.0.1 profile-index --output <temporary-index-path>
+   ./scripts/resume-tools profile-index --output <temporary-index-path>
    ```
 
    Read relevant entries from that index, then open only matching Markdown records; expand retrieval when needed to verify chronology or claims. If indexing fails, report the error and stop.
@@ -61,7 +61,7 @@ Before proposing or applying profile edits, read `<profile_dir>/README.md`. It i
 1. Stage the candidate without changing the canonical profile:
 
    ```sh
-   uvx resumebuilder-tools@1.0.1 stage-profile-update \
+   ./scripts/resume-tools stage-profile-update \
      --operations <operations-json-path>
    ```
 
@@ -70,7 +70,7 @@ Before proposing or applying profile edits, read `<profile_dir>/README.md`. It i
 3. If the user declines or approval is unavailable, discard the staged candidate:
 
    ```sh
-   uvx resumebuilder-tools@1.0.1 discard-profile-update \
+   ./scripts/resume-tools discard-profile-update \
      --stage-dir <stage_dir>
    ```
 
@@ -78,10 +78,10 @@ Before proposing or applying profile edits, read `<profile_dir>/README.md`. It i
 4. Only after explicit approval, promote that exact staged candidate:
 
    ```sh
-   uvx resumebuilder-tools@1.0.1 promote-profile-update \
+   ./scripts/resume-tools promote-profile-update \
      --stage-dir <stage_dir>
    ```
 
    The helper checks affected record contents and profile-wide evidence-ID/index dependencies, revalidates the candidate and index, and promotes with backups/rollback on ordinary write failures. Unrelated files and unrelated claim wording changes do not invalidate the preview. If relevant state changed after preview, rebuild the candidate, show the refreshed diff, and ask for approval again. Do not reapply the old approval.
-5. Report the promotion result and run `uvx resumebuilder-tools@1.0.1 validate-profile` as a post-promotion check. If promotion, rollback, or validation fails, report the exact error and affected paths; if rollback fails, retain and report the recovery-backup directory. Never claim success. Multi-file promotion is not crash-atomic.
+5. Report the promotion result and run `./scripts/resume-tools validate-profile` as a post-promotion check. If promotion, rollback, or validation fails, report the exact error and affected paths; if rollback fails, retain and report the recovery-backup directory. Never claim success. Multi-file promotion is not crash-atomic.
 6. Remove the temporary operations JSON after staging. Promotion removes the staging directory on success; discard it on decline. Do not copy temporary inputs or source documents into the repository.

@@ -23,7 +23,7 @@ Assess how well the canonical career profile documents a user's fit for a job. R
 1. Build a fresh compact index at a temporary path outside the repository, without overwriting the configured profile's `index.yaml`:
 
    ```sh
-   uvx resumebuilder-tools@1.0.1 profile-index --output <temporary-index-path>
+   ./scripts/resume-tools profile-index --output <temporary-index-path>
    ```
 
    Read the generated temporary index. Remove the temporary index after analysis.

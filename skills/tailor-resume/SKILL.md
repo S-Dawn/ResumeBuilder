@@ -28,7 +28,7 @@ Choose the mode that matches your goal:
 
 ## Build context on demand (all modes)
 
-1. Run `uvx resumebuilder-tools@1.0.1 profile-index` and read only `<profile_dir>/index.yaml`.
+1. Run `./scripts/resume-tools profile-index` and read only `<profile_dir>/index.yaml`.
 2. Use record summaries, metadata, tags, aliases, and the job description (if any) to identify candidate records.
 3. Read only the candidate Markdown records. Expand the set when needed to establish accurate dates, responsibilities, or evidence; do not impose an arbitrary record-count cap.
 4. Use stable evidence IDs from the record bullets in every source mapping. If relevant source claims conflict, omit the disputed claim and report the conflicting IDs for user clarification.
