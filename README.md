@@ -173,9 +173,57 @@ uv run python -m python_engine.ResumeBuilder \
 
 Add `--strict-one-page` to require a one-page PDF with extractable text and expected headings. The renderer reads `resume.yaml` by default if `--config` is omitted. See [python_engine/ResumeBuilder.py](python_engine/ResumeBuilder.py) and [python_engine/resume_tools.py](python_engine/resume_tools.py) for implementation and CLI details.
 
+### Run skills locally without installing from PyPI
+
+When developing new skill features or testing changes to `python_engine/`, run skills against your local code instead of the published PyPI package — no publish, no version bump required.
+
+1. **Set dev mode** in your shell before starting your agent runtime:
+
+   ```bash
+   export RESUMEBUILDER_TOOLS_MODE=dev
+   ```
+
+2. **Create a local config** (gitignored, one-time per project):
+
+   ```bash
+   cat > resumebuilder-skills.config.json <<EOF
+   {
+     "profile_dir": "profile",
+     "generated_dir": "generated"
+   }
+   EOF
+   ```
+
+3. **Invoke skills through your agent runtime** as usual. Skills now call `./scripts/resume-tools`, which runs `uv run -m python_engine.resume_tools` in dev mode — using your local `python_engine/` code directly.
+
+4. **Return to production** when done:
+
+   ```bash
+   unset RESUMEBUILDER_TOOLS_MODE
+   ```
+
+   Default (unset) runs `uvx resumebuilder-tools@latest` — the latest published package.
+
+**How agent runtimes resolve skills:**
+
+| Runtime | Skill location | Local setup |
+|---|---|---|
+| OpenCode | `.opencode/skills/*/` | Symlinked to `skills/*/`; edits to `skills/` are picked up automatically |
+| Claude Code | `.claude-plugin/plugin.json` | Lists `skills/*/` directly |
+| Codex / Copilot / VS Code | `.agents/skills/*/` | Symlinked to `skills/*/` |
+
+**Key files:**
+
+| File | Purpose |
+|---|---|
+| `scripts/resume-tools` | Wrapper: dev mode → local code via `uv run`; production → `uvx resumebuilder-tools@latest` |
+| `python_engine/cli_invoke.py` | Shared Python helper honoring `RESUMEBUILDER_TOOLS_MODE` |
+| `resumebuilder-skills.config.json` | Local dev config (gitignored): `profile_dir`, `generated_dir` |
+| `.agents/install-block.md` | Canonical install instructions per agent runtime |
+
 ## Contributing
 
-Contributions are welcome. For a substantial change, open an issue first to discuss the behavior or approach. For a pull request:
+For a substantial change, open an issue first to discuss the behavior or approach. For a pull request:
 
 1. Keep changes focused and update the relevant skill or documentation alongside code changes.
 2. Run the tests with `uv run python -m unittest discover -s tests`.
