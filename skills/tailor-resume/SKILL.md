@@ -26,6 +26,16 @@ Choose the mode that matches your goal:
 - **Master**: See [master-mode.md](master-mode.md)
 - **Market**: See [market-mode.md](market-mode.md)
 
+## Engine invocation
+
+The `./scripts/resume-tools` wrapper is part of the ResumeBuilder source
+checkout; skill installers do not copy it into the user's project. When this
+skill is installed, replace the `./scripts/resume-tools` prefix in all
+commands below and in the linked mode/rendering guides with
+`uvx resumebuilder-tools@latest`. When working from the ResumeBuilder source
+checkout, use `./scripts/resume-tools`; it honors
+`RESUMEBUILDER_TOOLS_MODE=dev` to run the local, unpublished engine.
+
 ## Build context on demand (all modes)
 
 1. Run `./scripts/resume-tools profile-index` and read only `<profile_dir>/index.yaml`.

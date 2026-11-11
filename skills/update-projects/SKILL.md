@@ -9,6 +9,15 @@ compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engi
 
 Use this skill for focused changes to a project record under `<profile_dir>/projects/`, including corresponding updates to `<profile_dir>/skills.md` when the project provides new evidence of the user's skills. Resolve `profile_dir` from `resumebuilder-skills.config.json` in the workspace or nearest parent directory, relative to the config file; if the config or key is absent, use `profile/`. The engine automatically applies configured profile and generated paths to CLI commands run from that workspace. Full-resume ingestion across record types belongs to `maintain-profile`. Do not edit the repository-root `resume.yaml` or application drafts under the configured `generated_dir` (default: `generated/`).
 
+## Engine invocation
+
+The `./scripts/resume-tools` wrapper is part of the ResumeBuilder source
+checkout; skill installers do not copy it into the user's project. When this
+skill is installed, replace the `./scripts/resume-tools` prefix in all
+commands below with `uvx resumebuilder-tools@latest`. When working from the
+ResumeBuilder source checkout, use `./scripts/resume-tools`; it honors
+`RESUMEBUILDER_TOOLS_MODE=dev` to run the local, unpublished engine.
+
 ## Read the shared contract
 
 Before proposing or applying profile edits, read `<profile_dir>/README.md`. It is the canonical editing contract for record metadata, evidence IDs, source notes, privacy, and validation. Follow it if this skill's summary is incomplete.

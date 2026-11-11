@@ -24,7 +24,11 @@ When prompted to select skills, install `setup-resumebuilder-skills` along with 
 npx skills@latest add S-Dawn/ResumeBuilder --skill=setup-resumebuilder-skills
 ```
 
-The skills.sh installer installs skill files for the agent you select. To update installed skills, run:
+The skills.sh installer copies the selected skill directories, not the
+repository's root `scripts/` directory. Installed skills therefore invoke the
+published engine with `uvx resumebuilder-tools@latest`; the
+`./scripts/resume-tools` wrapper is only for running skills from a source
+checkout. To update installed skills, run:
 
 ```bash
 npx skills@latest update
@@ -194,7 +198,11 @@ When developing new skill features or testing changes to `python_engine/`, run s
    EOF
    ```
 
-3. **Invoke skills through your agent runtime** as usual. Skills now call `./scripts/resume-tools`, which runs `uv run -m python_engine.resume_tools` in dev mode — using your local `python_engine/` code directly.
+3. **Invoke skills through your agent runtime** as usual. From the source
+   checkout, skills call `./scripts/resume-tools`, which runs
+   `uv run -m python_engine.resume_tools` in dev mode — using your local
+   `python_engine/` code directly. Installed skills use
+   `uvx resumebuilder-tools@latest`; they do not have the repository wrapper.
 
 4. **Return to production** when done:
 

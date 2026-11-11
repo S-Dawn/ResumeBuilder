@@ -36,6 +36,12 @@ The repo does **not** publish an npm package containing the skill code. Instead:
 7. `.agents/install-block.md` is the single source of truth for per-agent install wording, copied verbatim into `README.md`.
 8. `npx skills@latest add S-Dawn/ResumeBuilder -a <agent>` is the universal fallback (skills.sh) for agents without a native plugin system.
 
+The skills.sh route copies skill directories, not the repository root. In
+particular, `scripts/resume-tools` is not present in a skill-only installation.
+Installed skills call the published engine through
+`uvx resumebuilder-tools@latest`; the wrapper is used only from a source
+checkout, where `RESUMEBUILDER_TOOLS_MODE=dev` runs the local engine.
+
 ## Install routes
 
 | Agent | Command | Auto-updates? |

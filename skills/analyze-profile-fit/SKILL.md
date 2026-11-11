@@ -9,6 +9,15 @@ compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engi
 
 Assess how well the canonical career profile documents a user's fit for a job. Resolve `profile_dir` from `resumebuilder-skills.config.json` in the workspace or nearest parent directory, relative to the config file; if the config or key is absent, use `profile/`. The engine automatically applies this path to CLI commands run from that workspace. This is a standalone diagnostic: do not create or edit a resume, application draft, profile record, or retained report.
 
+## Engine invocation
+
+The `./scripts/resume-tools` wrapper is part of the ResumeBuilder source
+checkout; skill installers do not copy it into the user's project. When this
+skill is installed, replace the `./scripts/resume-tools` prefix in all
+commands below with `uvx resumebuilder-tools@latest`. When working from the
+ResumeBuilder source checkout, use `./scripts/resume-tools`; it honors
+`RESUMEBUILDER_TOOLS_MODE=dev` to run the local, unpublished engine.
+
 ## Inputs, privacy, and trust boundaries
 
 - Accept a job description pasted by the user or a path to a user-specified job-description file.

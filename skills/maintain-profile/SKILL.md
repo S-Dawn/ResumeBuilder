@@ -9,6 +9,15 @@ compatibility: Requires Python and uv/uvx to invoke the resumebuilder-tools engi
 
 Update the canonical Markdown records under the configured `profile_dir`. Resolve it from `resumebuilder-skills.config.json` in the workspace or nearest parent directory, relative to the config file; if the config or key is absent, use `profile/`. The engine automatically applies configured profile and generated paths to CLI commands run from that workspace. Use this skill for broader profile maintenance from a full resume or career facts the user provides, including project information present in a full resume. Do not edit the repository-root `resume.yaml` or application drafts under the configured `generated_dir` (default: `generated/`).
 
+## Engine invocation
+
+The `./scripts/resume-tools` wrapper is part of the ResumeBuilder source
+checkout; skill installers do not copy it into the user's project. When this
+skill is installed, replace the `./scripts/resume-tools` prefix in all
+commands below with `uvx resumebuilder-tools@latest`. When working from the
+ResumeBuilder source checkout, use `./scripts/resume-tools`; it honors
+`RESUMEBUILDER_TOOLS_MODE=dev` to run the local, unpublished engine.
+
 ## Read the shared contract
 
 Before proposing or applying profile edits, read `<profile_dir>/README.md`. It is the canonical editing contract for record metadata, evidence IDs, source notes, privacy, and validation. Follow it if this skill's summary is incomplete.

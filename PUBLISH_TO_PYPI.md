@@ -233,11 +233,13 @@ version-pinned published package via `uvx`:
 
 ### Abstraction layer
 
-Skills no longer reference `uvx` directly. They invoke
-`./scripts/resume-tools`, which is a thin wrapper that selects local vs.
-published mode at runtime via `RESUMEBUILDER_TOOLS_MODE`. Executable skills
-can import the shared helper `python_engine.cli_invoke` instead of shelling
-out to `uvx` directly:
+Skills invoke the engine through `./scripts/resume-tools` when run from the
+ResumeBuilder source checkout. The skills.sh installer copies skill
+directories but not the root `scripts/` directory, so installed skills use
+`uvx resumebuilder-tools@latest` directly. The wrapper selects local vs.
+published mode via `RESUMEBUILDER_TOOLS_MODE`. Source-checkout executable
+skills can import the shared helper `python_engine.cli_invoke` instead of
+shelling out to `uvx` directly:
 
 ```python
 from python_engine.cli_invoke import run
@@ -275,4 +277,8 @@ run("validate-profile", "--profile-dir", profile_dir)
 You now have a fully automated PyPI publishing pipeline:
 - **No API tokens** — trusted publishing via OIDC
 - **No manual builds** — GitHub Actions builds and publishes on release tags
-- **Version-pinned skills** — skills invoke `./scripts/resume-tools`, which runs the latest published package (`uvx resumebuilder-tools@latest`) by default; set `RESUMEBUILDER_TOOLS_MODE=dev` to run unpackaged local code instead
+- **Installed skills cannot find `./scripts/resume-tools`** — this is expected
+  because skill-only installers copy skill directories, not the repo root.
+  Installed skills should use `uvx resumebuilder-tools@latest`; use the wrapper
+  only from a source checkout.
+- **Local skill development** — set `RESUMEBUILDER_TOOLS_MODE=dev` before invoking skills from the source checkout to run unpackaged local code.
